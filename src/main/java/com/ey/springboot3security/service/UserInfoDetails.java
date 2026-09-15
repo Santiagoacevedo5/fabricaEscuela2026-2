@@ -17,13 +17,13 @@ public class UserInfoDetails implements UserDetails {
     private List<GrantedAuthority> authorities;
 
     public UserInfoDetails(UserInfo userInfo) {
-        this.username = userInfo.getEmail();
-        this.password = userInfo.getPassword();
-        this.authorities = List.of(userInfo.getRoles().split(","))
-                .stream()
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
-    }
+    this.username = userInfo.getUsername();
+    this.password = userInfo.getPassword();
+    this.authorities = List.of(userInfo.getRoles().split(","))
+            .stream()
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toList());
+}
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
