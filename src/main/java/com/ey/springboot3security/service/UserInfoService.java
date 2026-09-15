@@ -23,17 +23,18 @@ public class UserInfoService implements UserDetailsService {
         this.encoder = encoder;
     }
 
+    
     @Override
     public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
+        throws UsernameNotFoundException {
 
-        UserInfo user = repository.findByEmail(username)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                                "User not found with email: " + username));
+    UserInfo user = repository.findByUsername(username)
+            .orElseThrow(() ->
+                    new UsernameNotFoundException(
+                            "User not found with username: " + username));
 
-        return new UserInfoDetails(user);
-    }
+    return new UserInfoDetails(user);
+}
 
     // Add any additional methods for registering or managing users
     public String addUser(UserInfo userInfo) {

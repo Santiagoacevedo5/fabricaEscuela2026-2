@@ -13,19 +13,16 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner initAdminUser(UserInfoRepository repository, PasswordEncoder encoder) {
         return args -> {
-            String adminEmail = "admin@empresa.com";
 
-            if (repository.findByEmail(adminEmail).isEmpty()) {
+            if (repository.findByUsername("admin").isEmpty()) {
                 UserInfo admin = new UserInfo();
+                admin.setUsername("admin");
                 admin.setName("Administrador");
-                admin.setEmail(adminEmail);
-                admin.setPassword(encoder.encode("Admin123!"));
+                admin.setEmail("admin@empresa.com");
+                admin.setPassword(encoder.encode("Admin123"));
                 admin.setRoles("ROLE_ADMIN");
                 repository.save(admin);
-                System.out.println("✅ Usuario admin creado: " + adminEmail);
-            } else {
-                System.out.println("ℹ️ El admin ya existe, no se vuelve a crear.");
-            }
+}
         };
     }
 }
