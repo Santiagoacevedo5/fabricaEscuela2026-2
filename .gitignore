@@ -1,0 +1,15 @@
+# Compilados de Maven
+target/
+*.class
+
+# Archivos de IntelliJ
+.idea/
+*.iml
+out/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
