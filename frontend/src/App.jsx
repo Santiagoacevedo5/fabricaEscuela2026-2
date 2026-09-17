@@ -1,11 +1,8 @@
-import Login from './Login';
+import React from 'react';
+import Tiendas from './Tiendas';
 
 function App() {
-  return (
-    <div>
-      <Login />
-    </div>
-  );
+  return <Tiendas />;
 }
 
 export default App;
