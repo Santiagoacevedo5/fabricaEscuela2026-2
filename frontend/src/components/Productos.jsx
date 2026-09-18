@@ -1,5 +1,6 @@
 // Ruta: frontend/src/components/Productos.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import Sidebar from './Sidebar';
 
 // --- Iconos SVG inline (sin dependencias externas) ---
 const IconSearch = (props) => (
@@ -39,7 +40,7 @@ const CATEGORIAS_DISPONIBLES = [
   'Otro'
 ];
 
-export default function Productos() {
+export default function Productos({ onNavigate }) {
   const [productos, setProductos] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
@@ -135,7 +136,9 @@ export default function Productos() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif' }}>
+      <Sidebar activeView="productos" onNavigate={onNavigate} />
+      <main style={{ flex: 1, padding: '30px 40px' }}>
       <div className="max-w-6xl mx-auto">
         {/* ENCABEZADO */}
         <div className="flex items-start justify-between mb-6">
@@ -145,7 +148,7 @@ export default function Productos() {
           </div>
           <button
             onClick={abrirModalRegistro}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#254a75] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
           >
             <IconPlus className="w-4 h-4" />
             Registrar producto
@@ -254,7 +257,6 @@ export default function Productos() {
         <div className="flex items-center justify-between text-sm text-slate-500 mt-4">
           <span>{productosFiltrados.length} de {productos.length} productos</span>
         </div>
-      </div>
 
       {/* MODAL: REGISTRAR / EDITAR PRODUCTO */}
       {modalAbierto && (
@@ -333,7 +335,7 @@ export default function Productos() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2.5 text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors"
+                  className="px-4 py-2.5 text-sm font-medium bg-[#1e3a5f] hover:bg-[#254a75] text-white rounded-lg transition-colors"
                 >
                   Registrar producto
                 </button>
@@ -342,6 +344,8 @@ export default function Productos() {
           </div>
         </div>
       )}
+      </div>
+      </main>
     </div>
   );
 }

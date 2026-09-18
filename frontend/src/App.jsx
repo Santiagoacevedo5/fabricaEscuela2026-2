@@ -1,8 +1,15 @@
-import React from 'react';
+import { useState } from 'react';
 import Tiendas from './Tiendas';
+import Productos from './components/Productos';
 
 function App() {
-  return <Tiendas />;
+  const [vista, setVista] = useState('tiendas');
+
+  return vista === 'productos' ? (
+    <Productos onNavigate={setVista} />
+  ) : (
+    <Tiendas onNavigate={setVista} />
+  );
 }
 
 export default App;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
 
-export default function Tiendas() {
+export default function Tiendas({ onNavigate }) {
   const [tiendas, setTiendas] = useState([]);
   const [encargados, setEncargados] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -94,44 +95,7 @@ export default function Tiendas() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif' }}>
-      {/* 🔹 Barra Lateral (Sidebar Figma) */}
-      <aside style={{ width: '240px', backgroundColor: '#1a3352', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 0' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 20px 30px 20px', fontSize: '18px', fontWeight: 'bold' }}>
-            <div style={{ width: '28px', height: '28px', backgroundColor: '#2563eb', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>
-            WebZaraV.1
-          </div>
-
-          <div style={{ fontSize: '11px', color: '#8fa0b5', padding: '0 20px 10px 20px', fontWeight: 'bold', letterSpacing: '1px' }}>SISTEMA</div>
-          <nav>
-            <a href="#empleados" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', color: '#a0aec0', textDecoration: 'none', fontSize: '14px' }}>
-              👥 Empleados
-            </a>
-            <a href="#tiendas" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', color: '#fff', backgroundColor: '#254a75', borderLeft: '4px solid #3b82f6', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>
-              🏪 Tiendas
-            </a>
-            <a href="#centros" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', color: '#a0aec0', textDecoration: 'none', fontSize: '14px' }}>
-              🔄 Centros de Distribución
-            </a>
-            <a href="#productos" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', color: '#a0aec0', textDecoration: 'none', fontSize: '14px' }}>
-              📦 Productos
-            </a>
-          </nav>
-        </div>
-
-        <div style={{ padding: '0 20px', borderTop: '1px solid #284466', paddingTop: '15px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>A</div>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold' }}>Administrador del Siste...</div>
-              <div style={{ fontSize: '11px', color: '#8fa0b5' }}>Administrador</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '13px', color: '#a0aec0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            ↪ Cerrar sesión
-          </div>
-        </div>
-      </aside>
+      <Sidebar activeView="tiendas" onNavigate={onNavigate} />
 
       {/* 🔹 Contenido Principal */}
       <main style={{ flex: 1, padding: '30px 40px' }}>
