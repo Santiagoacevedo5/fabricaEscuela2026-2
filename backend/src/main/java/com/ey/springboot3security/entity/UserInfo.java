@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 
 @Entity
 @Data
@@ -16,10 +17,14 @@ public class UserInfo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
     private String username;
     private String name;
     private String email;
     private String password;
+    private String confirmarPassword;
     private String roles;
+    private String documento;
+    private String estado;
+    private LocalDate fechaRegistro;
 }

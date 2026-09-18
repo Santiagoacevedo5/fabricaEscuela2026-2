@@ -11,6 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,11 @@ public class UserController {
     @PostMapping("/addNewUser")
     public String addNewUser(@RequestBody UserInfo userInfo) {
         return service.addUser(userInfo);
+    }
+
+    @GetMapping("/users")
+    public List<UserInfo> getAllUsers() {
+        return service.getAllUsers();
     }
 
     // Removed the role checks here as they are already managed in SecurityConfig
