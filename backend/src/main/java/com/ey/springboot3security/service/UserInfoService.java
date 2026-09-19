@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import java.util.Optional;
+import java.util.List;
 
 @Service
 public class UserInfoService implements UserDetailsService {
@@ -36,11 +37,40 @@ public class UserInfoService implements UserDetailsService {
     return new UserInfoDetails(user);
 }
 
-    // Add any additional methods for registering or managing users
     public String addUser(UserInfo userInfo) {
-        // Encrypt password before saving
+        if (userInfo.getName() == null || userInfo.getName().isBlank()
+                || userInfo.getEmail() == null || userInfo.getEmail().isBlank()
+                || userInfo.getDocumento() == null || userInfo.getDocumento().isBlank()
+                || userInfo.getUsername() == null || userInfo.getUsername().isBlank()
+                || userInfo.getPassword() == null || userInfo.getPassword().isBlank()
+                || userInfo.getRoles() == null || userInfo.getRoles().isBlank()) {
+            return "Todos los campos son obligatorios";
+        }
+
+        if (repository.existsByUsername(userInfo.getUsername())) {
+            return "El usuario ya existe";
+        }
+        if (repository.existsByEmail(userInfo.getEmail())) {
+            return "El correo ya existe";
+        }
+        if (repository.existsByDocumento(userInfo.getDocumento())) {
+            return "El documento ya existe";
+        }
+        if (!userInfo.getPassword().equals(userInfo.getConfirmarPassword())) {
+            return "Las contraseñas no coinciden";
+        }
         userInfo.setPassword(encoder.encode(userInfo.getPassword()));
+        if (userInfo.getEstado() == null || userInfo.getEstado().isBlank()) {
+            userInfo.setEstado("ACTIVO");
+        }
+        if (userInfo.getFechaRegistro() == null) {
+            userInfo.setFechaRegistro(java.time.LocalDate.now());
+        }
         repository.save(userInfo);
-        return "User added successfully!";
+        return "Empleado registrado correctamente";
+    }
+
+    public List<UserInfo> getAllUsers() {
+        return repository.findAll();
     }
 }

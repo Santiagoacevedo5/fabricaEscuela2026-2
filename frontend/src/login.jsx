@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function Login() {
+function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +24,8 @@ function Login() {
 
       const token = await response.text();
       localStorage.setItem('token', token);
-      alert('¡Login exitoso!');
+      localStorage.setItem('username', username);
+      onLoginSuccess(username);
       // Aquí luego rediriges a tu dashboard, ej: navigate('/dashboard')
     } catch (err) {
       setError(err.message);
