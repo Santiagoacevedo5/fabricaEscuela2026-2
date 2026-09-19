@@ -24,7 +24,8 @@ function Login({ onLoginSuccess }) {
 
       const token = await response.text();
       localStorage.setItem('token', token);
-      onLoginSuccess();
+      localStorage.setItem('username', username);
+      onLoginSuccess(username);
       // Aquí luego rediriges a tu dashboard, ej: navigate('/dashboard')
     } catch (err) {
       setError(err.message);
