@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Empleados from './pages/Empleados'
 import Tiendas from './Tiendas'
 import Login from './login'
+import CentrosDistribucion from './pages/CentrosDistribucion'
 
 export default function App() {
     const [autenticado, setAutenticado] = useState(false)
@@ -40,6 +41,10 @@ export default function App() {
         if (view === 'tiendas') {
             return <Tiendas />
         }
+        if (view === 'centros'){
+            return <CentrosDistribucion />;
+            }
+
         return (
             <div className="p-6 text-sm text-slate-500">
                 Esta función aún está en desarrollo.
