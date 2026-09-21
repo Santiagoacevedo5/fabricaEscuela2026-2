@@ -1,6 +1,5 @@
 // Ruta: frontend/src/components/Productos.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import Sidebar from './Sidebar';
 
 // --- Iconos SVG inline (sin dependencias externas) ---
 const IconSearch = (props) => (
@@ -137,7 +136,6 @@ export default function Productos({ onNavigate }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif' }}>
-      <Sidebar activeView="productos" onNavigate={onNavigate} />
       <main style={{ flex: 1, padding: '30px 40px' }}>
       <div className="max-w-6xl mx-auto">
         {/* ENCABEZADO */}

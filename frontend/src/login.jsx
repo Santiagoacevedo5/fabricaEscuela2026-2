@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-// 1. Añadimos { setToken } como prop
-function Login({ setToken }) {
+function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,11 +24,9 @@ function Login({ setToken }) {
 
       const token = await response.text();
       localStorage.setItem('token', token);
-      
-      // 2. Ejecutamos setToken para que App.jsx actualice la vista a Productos
-      setToken(token); 
-      
-      alert('¡Login exitoso!');
+      localStorage.setItem('username', username);
+      onLoginSuccess(username);
+      // Aquí luego rediriges a tu dashboard, ej: navigate('/dashboard')
     } catch (err) {
       setError(err.message);
     } finally {
