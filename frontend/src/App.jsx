@@ -5,27 +5,15 @@ import Tiendas from './Tiendas'
 import Login from './login'
 import CentrosDistribucion from './pages/CentrosDistribucion'
 
-export default function App() {
-    const [autenticado, setAutenticado] = useState(false)
-    const [usuario, setUsuario] = useState(null)
-    const [view, setView] = useState('empleados')
-    const [empleados, setEmpleados] = useState([])
+function App() {
+  const [vista, setVista] = useState('tiendas');
 
-    useEffect(() => {
-        const token = localStorage.getItem('token')
-        const username = localStorage.getItem('username')
-        if (token) {
-            setAutenticado(true)
-            setUsuario({ nombre: username || 'Usuario' })
-        }
-    }, [])
-
-    const handleLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('username')
-        setAutenticado(false)
-        setUsuario(null)
-    }
+  return vista === 'productos' ? (
+    <Productos onNavigate={setVista} />
+  ) : (
+    <Tiendas onNavigate={setVista} />
+  );
+}
 
     if (!autenticado) {
         return <Login onLoginSuccess={(username) => {
