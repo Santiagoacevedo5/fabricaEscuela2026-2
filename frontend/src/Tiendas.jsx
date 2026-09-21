@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
 
-export default function Tiendas() {
+export default function Tiendas({ onNavigate }) {
   const [tiendas, setTiendas] = useState([]);
   const [encargados, setEncargados] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -93,22 +94,8 @@ export default function Tiendas() {
   });
 
   return (
-      <div style={{ backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif', minHeight: '100%' }}>
-        {/* Contenido Principal */}
-        <main style={{ padding: '30px 40px' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '26px', color: '#111827' }}>Tiendas</h1>
-              <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '14px' }}>Gestión de puntos de venta</p>
-            </div>
-            <button
-                onClick={() => setModalAbierto(true)}
-                style={{ backgroundColor: '#1e3a5f', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              + Registrar tienda
-            </button>
-          </div>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif' }}>
+      <Sidebar activeView="tiendas" onNavigate={onNavigate} />
 
           {/* Buscador y Filtro */}
           <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
