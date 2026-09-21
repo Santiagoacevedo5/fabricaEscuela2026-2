@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import Tiendas from './Tiendas';
-import Productos from './components/Productos';
+import { useState, useEffect } from 'react'
+import Layout from './components/Layout'
+import Empleados from './pages/Empleados'
+import Tiendas from './Tiendas'
+import Login from './login'
+import CentrosDistribucion from './pages/CentrosDistribucion'
 
 function App() {
   const [vista, setVista] = useState('tiendas');
@@ -26,6 +29,10 @@ function App() {
         if (view === 'tiendas') {
             return <Tiendas />
         }
+        if (view === 'centros'){
+            return <CentrosDistribucion />;
+            }
+
         return (
             <div className="p-6 text-sm text-slate-500">
                 Esta función aún está en desarrollo.
