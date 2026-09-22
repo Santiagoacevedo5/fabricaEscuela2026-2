@@ -1,6 +1,7 @@
 package com.ey.springboot3security.controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
+import java.util.List;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,11 +12,8 @@ import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.UserInfo;
 import com.ey.springboot3security.service.CentroDistribucionService;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/centros")
-@CrossOrigin(origins = "http://localhost:5173")
 public class CentroDistribucionController {
     private final CentroDistribucionService centroService;
 

@@ -2,7 +2,6 @@ package com.ey.springboot3security.controller;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,7 +13,6 @@ import com.ey.springboot3security.service.TiendaService;
 
 @RestController
 @RequestMapping("/api/tiendas")
-@CrossOrigin(origins = "http://localhost:5173")
 public class TiendaController {
 
     private final TiendaService service;
