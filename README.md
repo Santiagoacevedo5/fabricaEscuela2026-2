@@ -2,6 +2,15 @@
 
 Sistema web para el control de inventario: gestión de tiendas, bodegas, centros de distribución y productos desde un único sistema integrado. Proyecto académico.
 
+## 👥 Equipo
+
+| Nombre | Rol |
+|---|---|
+| Santiago Acevedo Correa | Backend |
+| María Camila Parra Morales | Backend |
+| Mateo Daniel Galeano Quinones | Backend |
+| Salome Toro Cadavid | Backend |
+| Nataly Lievano Arroyo | Backend |
 ## 📌 Descripción del proyecto
 
 La aplicación permite a los usuarios autenticarse (login con JWT) y, según su rol (`ROLE_USER` / `ROLE_ADMIN`), acceder a distintas funcionalidades de administración de inventario.
@@ -112,17 +121,6 @@ Base URL: `http://localhost:8080`
 ```
 Authorization: Bearer <token>
 ```
-## 👥 Equipo
-
-| Nombre | Rol |
-|---|---|
-| Santiago Acevedo Correa | Backend |
-| María Camila Parra Morales | Backend |
-| Mateo Daniel Galeano Quinones | Backend |
-| Salome Toro Cadavid | Backend |
-| Nataly Lievano Arroyo | Backend |
-
-
 ## 📄 Licencia
 
 Proyecto académico — uso educativo.
