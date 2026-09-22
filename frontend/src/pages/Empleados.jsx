@@ -73,7 +73,7 @@ export default function Empleados({ empleados, onChange }) {
         setErrorServidor('')
         setEnviando(true)
         try {
-            const respuesta = await fetch('/auth/addNewUser', {
+            const respuesta = await fetch('http://localhost:8080/auth/addNewUser', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
