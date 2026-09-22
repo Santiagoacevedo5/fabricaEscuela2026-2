@@ -64,7 +64,7 @@ cd tu-repo
 Crea la base de datos en PostgreSQL (por consola `psql` o desde pgAdmin):
 
 ```sql
-CREATE DATABASE university;
+CREATE DATABASE empresa;
 ```
 
 > Puedes usar el nombre que prefieras, solo asegúrate de que coincida con la URL en `application.properties`.
