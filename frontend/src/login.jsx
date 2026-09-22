@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resumen, setResumen] = useState({ tiendas: 0, centros: 0, productos: 0 });
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/resumen')
+        .then((res) => res.json())
+        .then((data) => setResumen(data))
+        .catch((err) => console.error('Error al cargar el resumen:', err));
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -62,15 +70,15 @@ function Login({ onLoginSuccess }) {
 
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-lg bg-slate-900 p-4">
-            <p className="text-2xl font-bold">3</p>
+            <p className="text-2xl font-bold">{resumen.tiendas}</p>
             <p className="text-sm text-blue-300">Tiendas activas</p>
           </div>
           <div className="rounded-lg bg-slate-900 p-4">
-            <p className="text-2xl font-bold">1</p>
+            <p className="text-2xl font-bold">{resumen.centros}</p>
             <p className="text-sm text-blue-300">Centros de Distribución</p>
           </div>
           <div className="rounded-lg bg-slate-900 p-4">
-            <p className="text-2xl font-bold">248</p>
+            <p className="text-2xl font-bold">{resumen.productos}</p>
             <p className="text-sm text-blue-300">Productos</p>
           </div>
         </div>
