@@ -35,6 +35,9 @@ public class CentroDistribucionService {
         if (centroDistribucion.getFechaRegistro()==null){
             centroDistribucion.setFechaRegistro(java.time.LocalDate.now());
         }
+        if (centroDistribucion.getEstado() == null || centroDistribucion.getEstado().isBlank()){
+            centroDistribucion.setEstado("ACTIVO");
+        }
         centroRepository.save(centroDistribucion);
         return "Centro de distribución registrado correctamente";
     }
@@ -43,7 +46,7 @@ public class CentroDistribucionService {
     }
 
     public List<UserInfo> listarEncargadosDisponibles(){
-        List<UserInfo> encargadosConRol = userInfoRepository.findByRolesContaining("ROLE_ENCARGADO_CD");
+        List<UserInfo> encargadosConRol = userInfoRepository.findByRolesContaining("ENCARGADO_CD");
 
         List <CentroDistribucion> centros = centroRepository.findAll();
 

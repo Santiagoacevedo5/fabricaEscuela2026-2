@@ -7,6 +7,22 @@ const FORM_INICIAL = {
     encargadoId: '',
 }
 
+const StatusBadge = ({ estado }) => (
+    <span
+        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+        style={{
+            backgroundColor: estado === 'ACTIVO' ? '#dcfce7' : '#fee2e2',
+            color: estado === 'ACTIVO' ? '#16a34a' : '#dc2626',
+        }}
+    >
+        <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: estado === 'ACTIVO' ? '#16a34a' : '#dc2626' }}
+        />
+        {estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}
+    </span>
+)
+
 export default function CentrosDistribucion() {
     const [centros, setCentros] = useState([])
     const [encargados, setEncargados] = useState([])
@@ -166,7 +182,7 @@ export default function CentrosDistribucion() {
                     <table className="w-full text-sm">
                         <thead>
                         <tr style={{ backgroundColor: '#f8fafc' }}>
-                            {['Nombre', 'Ubicación', 'Encargado', 'Fecha de registro'].map(h => (
+                            {['Nombre', 'Ubicación', 'Encargado', 'Estado', 'Fecha de registro'].map(h => (
                                 <th
                                     key={h}
                                     className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap border-b border-slate-200"
@@ -179,7 +195,7 @@ export default function CentrosDistribucion() {
                         <tbody className="divide-y divide-slate-100">
                         {centrosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">
+                                <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
                                     No hay centros de distribución registrados.
                                 </td>
                             </tr>
@@ -190,6 +206,9 @@ export default function CentrosDistribucion() {
                                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{c.ubicacion}</td>
                                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                                         {c.encargado ? c.encargado.name : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <StatusBadge estado={c.estado} />
                                     </td>
                                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
                                         {c.fechaRegistro}
