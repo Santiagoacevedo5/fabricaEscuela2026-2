@@ -112,35 +112,16 @@ Base URL: `http://localhost:8080`
 ```
 Authorization: Bearer <token>
 ```
-
-**Ejemplo de body para login:**
-```json
-{
-  "username": "admin",
-  "password": "tu_contraseña"
-}
-```
-
-> 📁 Los endpoints se definen en clases anotadas con `@RestController` dentro de `src/main/java/.../controller/`. Cada nueva funcionalidad (productos, tiendas, etc.) debería seguir esta misma convención: `NombreController.java`.
-
-## 🌿 Flujo de trabajo en equipo (Git)
-
-- La rama `main` contiene el código estable.
-- Cada funcionalidad se desarrolla en su propia rama (feature/HU), con nombre descriptivo, ej: `feature-login`, `HU-01-registro-usuario`.
-- Al terminar una funcionalidad, se abre un Pull Request hacia `main` para revisión antes de fusionar.
-
-```bash
-git checkout -b nombre-de-tu-rama
-# ... trabajas y haces commits ...
-git push -u origin nombre-de-tu-rama
-```
-
 ## 👥 Equipo
 
 | Nombre | Rol |
 |---|---|
-| _(agregar integrantes)_ | Backend |
-| _(agregar integrantes)_ | Frontend |
+| Santiago Acevedo Correa | Backend |
+| María Camila Parra Morales | Backend |
+| Mateo Daniel Galeano Quinones | Backend |
+| Salome Toro Cadavid | Backend |
+| Nataly Lievano Arroyo | Backend |
+
 
 ## 📄 Licencia
 
