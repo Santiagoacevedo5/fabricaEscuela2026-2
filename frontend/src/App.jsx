@@ -18,8 +18,35 @@ export default function App() {
         if (token) {
             setAutenticado(true)
             setUsuario({ nombre: username || 'Usuario' })
+            cargarEmpleados(token)
         }
     }, [])
+
+    const cargarEmpleados = async (token) => {
+        try {
+            const respuesta = await fetch('http://localhost:8080/auth/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (!respuesta.ok) {
+                console.error('Error al cargar empleados:', respuesta.status)
+                return
+            }
+            const datos = await respuesta.json()
+            const empleadosMapeados = datos.map(emp => ({
+                id: emp.id,
+                nombre: emp.name,
+                correo: emp.email,
+                documento: emp.documento,
+                usuario: emp.username,
+                rol: emp.roles,
+                estado: (emp.estado || '').toLowerCase(),
+                fechaRegistro: emp.fechaRegistro,
+            }))
+            setEmpleados(empleadosMapeados)
+        } catch (err) {
+            console.error('Error al conectar con el servidor:', err)
+        }
+    }
 
     const handleLogout = () => {
         localStorage.removeItem('token')
@@ -32,6 +59,8 @@ export default function App() {
         return <Login onLoginSuccess={(username) => {
             setUsuario({ nombre: username })
             setAutenticado(true)
+            const token = localStorage.getItem('token')
+            cargarEmpleados(token)
         }} />
     }
 
