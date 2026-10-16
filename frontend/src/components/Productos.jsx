@@ -56,7 +56,7 @@ export default function Productos({ onNavigate }) {
   const fetchProductos = async () => {
     setCargando(true);
     try {
-      const response = await fetch('http://localhost:8080/api/productos', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
@@ -95,7 +95,7 @@ export default function Productos({ onNavigate }) {
     setMensaje('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/productos', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

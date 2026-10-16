@@ -26,7 +26,7 @@ export default function CentrosDistribucion() {
 
     const cargarCentros = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/centros')
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`)
             if (res.ok) {
                 const data = await res.json()
                 setCentros(data)
@@ -38,7 +38,7 @@ export default function CentrosDistribucion() {
 
     const cargarEncargados = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/centros/encargados-disponibles')
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros/encargados-disponibles`)
             if (res.ok) {
                 const data = await res.json()
                 setEncargados(data)
@@ -78,7 +78,7 @@ export default function CentrosDistribucion() {
                 body.encargado = { id: Number(form.encargadoId) }
             }
 
-            const res = await fetch('http://localhost:8080/api/centros', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),

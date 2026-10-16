@@ -8,7 +8,7 @@ function Login({ onLoginSuccess }) {
   const [resumen, setResumen] = useState({ tiendas: 0, centros: 0, productos: 0 });
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/resumen')
+    fetch(`${import.meta.env.VITE_API_URL}/api/resumen`)
         .then((res) => res.json())
         .then((data) => setResumen(data))
         .catch((err) => console.error('Error al cargar el resumen:', err));
@@ -20,7 +20,7 @@ function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/auth/generateToken', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/generateToken`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

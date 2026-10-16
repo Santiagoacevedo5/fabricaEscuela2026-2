@@ -73,7 +73,7 @@ export default function Empleados({ empleados, onChange }) {
         setErrorServidor('')
         setEnviando(true)
         try {
-            const respuesta = await fetch('http://localhost:8080/auth/addNewUser', {
+            const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/addNewUser`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

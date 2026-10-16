@@ -24,7 +24,7 @@ export default function App() {
 
     const cargarEmpleados = async (token) => {
         try {
-            const respuesta = await fetch('http://localhost:8080/auth/users', {
+            const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             if (!respuesta.ok) {
@@ -51,7 +51,7 @@ export default function App() {
     const handleLogout = () => {
         const token = localStorage.getItem('token')
         if (token) {
-            fetch('http://localhost:8080/auth/logout', {
+            fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 keepalive: true,

@@ -23,7 +23,7 @@
 
    const cargarTiendas = async () => {
      try {
-       const res = await fetch('http://localhost:8080/api/tiendas');
+       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`);
        if (res.ok) {
          const data = await res.json();
          setTiendas(data);
@@ -35,7 +35,7 @@
 
    const cargarEncargados = async () => {
      try {
-       const res = await fetch('http://localhost:8080/api/tiendas/encargados-disponibles');
+       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas/encargados-disponibles`);
        if (res.ok) {
          const data = await res.json();
          setEncargados(data);
@@ -59,7 +59,7 @@
      if (!validarFormulario()) return;
 
      try {
-       const res = await fetch('http://localhost:8080/api/tiendas', {
+       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify(formData)
