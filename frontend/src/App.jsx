@@ -49,11 +49,38 @@ export default function App() {
     }
 
     const handleLogout = () => {
+        const token = localStorage.getItem('token')
+        if (token) {
+            fetch('http://localhost:8080/auth/logout', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                keepalive: true,
+            }).catch(err => console.error('Error al invalidar el token:', err))
+        }
         localStorage.removeItem('token')
         localStorage.removeItem('username')
         setAutenticado(false)
         setUsuario(null)
+        setEmpleados([])
+        setView('empleados')
     }
+
+    // Si el token desaparece (logout en otra pestaña o página restaurada con "atrás"), volver al login
+    useEffect(() => {
+        const verificarSesion = () => {
+            if (!localStorage.getItem('token')) {
+                setAutenticado(false)
+                setUsuario(null)
+                setEmpleados([])
+            }
+        }
+        window.addEventListener('pageshow', verificarSesion)
+        window.addEventListener('storage', verificarSesion)
+        return () => {
+            window.removeEventListener('pageshow', verificarSesion)
+            window.removeEventListener('storage', verificarSesion)
+        }
+    }, [])
 
     if (!autenticado) {
         return <Login onLoginSuccess={(username) => {

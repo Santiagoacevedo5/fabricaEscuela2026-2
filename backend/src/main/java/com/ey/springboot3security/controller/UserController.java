@@ -41,6 +41,11 @@ public class UserController {
 
     // Removed the role checks here as they are already managed in SecurityConfig
 
+    @PostMapping("/logout")
+    public void logout(@RequestHeader("Authorization") String authHeader) {
+        jwtService.revokeToken(authHeader.substring(7));
+    }
+
     @PostMapping("/generateToken")
     public String authenticateAndGetToken(@RequestBody AuthRequest authRequest) {
         Authentication authentication = authenticationManager.authenticate(
