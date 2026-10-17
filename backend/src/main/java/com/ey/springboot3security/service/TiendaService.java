@@ -26,6 +26,19 @@ public class TiendaService {
     public Tienda registrarTienda(Tienda tienda) {
         // el formulario no envía "activa": sin esto se guardaría null y la columna es NOT NULL
         if (tienda.getActiva() == null) tienda.setActiva(true);
+
+        // Resolver el encargado desde el id enviado por el frontend,
+        // igual que en actualizarTienda (evita entidades detached al guardar)
+        if (tienda.getEncargado() != null && tienda.getEncargado().getId() != null) {
+            Integer encargadoId = tienda.getEncargado().getId();
+            UserInfo encargado = userInfoRepository.findById(encargadoId)
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Encargado no encontrado"));
+            tienda.setEncargado(encargado);
+        } else {
+            tienda.setEncargado(null);
+        }
+
         return repository.save(tienda);
     }
 

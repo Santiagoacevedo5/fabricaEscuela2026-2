@@ -74,10 +74,19 @@ export default function Tiendas() {
     if (!validarFormulario()) return;
 
     try {
+      // Enviamos "encargado": { id } igual que en el PUT de edición,
+      // para que Jackson lo mapee a la entidad Tienda.encargado
+      const bodyPayload = {
+        nombre: formData.nombre,
+        direccion: formData.direccion,
+        region: formData.region,
+        encargado: formData.encargadoId ? { id: Number(formData.encargadoId) } : null
+      };
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(bodyPayload)
       });
 
       if (res.ok) {
