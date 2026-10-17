@@ -5,6 +5,8 @@ import Tiendas from './Tiendas'
 import Login from './login'
 import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
+import Inventario from './pages/Inventario'
+
 
 export default function App() {
     const [autenticado, setAutenticado] = useState(false)
@@ -104,6 +106,10 @@ export default function App() {
         if (view === 'productos'){
             return <Productos />;
             }
+
+        if (view === 'inventario') {
+            return <Inventario />
+        }
 
         return (
             <div className="p-6 text-sm text-slate-500">
