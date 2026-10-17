@@ -18,6 +18,23 @@ const IconX = (props) => (
     <path d="M18 6 6 18M6 6l12 12" />
   </svg>
 );
+const IconPencil = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m16 5 3 3M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z" />
+  </svg>
+);
+const IconDeactivate = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m5.6 5.6 12.8 12.8" />
+  </svg>
+);
+const IconActivate = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m8 12 2.5 2.5L16 9" />
+  </svg>
+);
 
 const FORM_INICIAL = { nombre: '', identificador: '', categoria: '', descripcion: '', activo: true };
 
@@ -50,6 +67,8 @@ export default function Productos({ onNavigate }) {
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [formData, setFormData] = useState(FORM_INICIAL);
+  const [editando, setEditando] = useState(null); // producto en edición; null = registro nuevo
+  const [estadoPendiente, setEstadoPendiente] = useState(null);
 
   const token = localStorage.getItem('token'); // Asumiendo que guardan el JWT aquí al loguearse
 
@@ -80,8 +99,17 @@ export default function Productos({ onNavigate }) {
   };
 
   const abrirModalRegistro = () => {
+    setEditando(null);
     setFormData(FORM_INICIAL);
     setError('');
+    setModalAbierto(true);
+  };
+
+  const abrirModalEdicion = (p) => {
+    setEditando(p);
+    setFormData({ ...p, descripcion: p.descripcion ?? '' });
+    setError('');
+    setMensaje('');
     setModalAbierto(true);
   };
 
@@ -94,9 +122,15 @@ export default function Productos({ onNavigate }) {
     setError('');
     setMensaje('');
 
+    // El ID no se edita, así que solo puede repetirse al registrar (el backend sigue siendo la validación definitiva)
+    if (!editando && productos.some((p) => p.identificador.toLowerCase() === formData.identificador.trim().toLowerCase())) {
+      return setError('Ya existe un producto con ese identificador.');
+    }
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
-        method: 'POST',
+      const url = `${import.meta.env.VITE_API_URL}/api/productos${editando ? `/${editando.idProducto}` : ''}`;
+      const response = await fetch(url, {
+        method: editando ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -104,8 +138,8 @@ export default function Productos({ onNavigate }) {
         body: JSON.stringify(formData)
       });
 
-      if (response.status === 201) {
-        setMensaje('Producto registrado exitosamente.');
+      if (response.ok) {
+        setMensaje(editando ? 'Producto actualizado exitosamente.' : 'Producto registrado exitosamente.');
         cerrarModal();
         fetchProductos();
       } else {
@@ -114,6 +148,34 @@ export default function Productos({ onNavigate }) {
       }
     } catch (err) {
       setError('Error de conexión con el servidor.');
+    }
+  };
+
+  const confirmarCambioEstado = async () => {
+    const activo = !estadoPendiente.activo;
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/productos/${estadoPendiente.idProducto}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ ...estadoPendiente, activo })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        setError(errorText || `No se pudo ${activo ? 'activar' : 'desactivar'} el producto.`);
+        setEstadoPendiente(null);
+        return;
+      }
+
+      setEstadoPendiente(null);
+      setMensaje(`Producto ${activo ? 'activado' : 'desactivado'} exitosamente.`);
+      fetchProductos();
+    } catch {
+      setError('Error de conexión con el servidor.');
+      setEstadoPendiente(null);
     }
   };
 
@@ -156,6 +218,50 @@ export default function Productos({ onNavigate }) {
         {mensaje && (
           <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
             {mensaje}
+          </div>
+        )}
+        {estadoPendiente && (
+          <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-[60]">
+            <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  {estadoPendiente.activo ? 'Desactivar producto' : 'Activar producto'}
+                </h2>
+                <button
+                  onClick={() => setEstadoPendiente(null)}
+                  aria-label="Cerrar"
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <IconX className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="px-5 py-4 text-sm text-slate-600">
+                {estadoPendiente.activo ? (
+                  <>
+                    <p>Este producto dejará de mostrarse como disponible. ¿Desactivar “{estadoPendiente.nombre}”?</p>
+                    <p className="mt-2 text-xs text-slate-500">El cambio quedará registrado en el historial del sistema.</p>
+                  </>
+                ) : (
+                  <p>¿Activar el producto “{estadoPendiente.nombre}”?</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 px-5 pb-4">
+                <button
+                  onClick={() => setEstadoPendiente(null)}
+                  className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarCambioEstado}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                    estadoPendiente.activo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {estadoPendiente.activo ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
         {error && !modalAbierto && (
@@ -207,18 +313,19 @@ export default function Productos({ onNavigate }) {
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoría</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Descripción</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-400">
                       Cargando productos...
                     </td>
                   </tr>
                 ) : productosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-400">
                       No se encontraron productos con estos filtros.
                     </td>
                   </tr>
@@ -243,6 +350,32 @@ export default function Productos({ onNavigate }) {
                           {p.activo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => abrirModalEdicion(p)}
+                            aria-label={`Editar ${p.nombre}`}
+                            title="Editar producto"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
+                          >
+                            <IconPencil className="h-4 w-4" />
+                          </button>
+                        <button
+                          onClick={() => setEstadoPendiente(p)}
+                          aria-label={`${p.activo ? 'Desactivar' : 'Activar'} ${p.nombre}`}
+                          title={`${p.activo ? 'Desactivar' : 'Activar'} producto`}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md focus:outline-none focus:ring-2 ${
+                            p.activo
+                              ? 'text-red-500 hover:bg-red-50 focus:ring-red-500/20'
+                              : 'text-green-600 hover:bg-green-50 focus:ring-green-500/20'
+                          }`}
+                        >
+                          {p.activo
+                            ? <IconDeactivate className="h-4 w-4" />
+                            : <IconActivate className="h-4 w-4" />}
+                        </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -260,8 +393,8 @@ export default function Productos({ onNavigate }) {
       {modalAbierto && (
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-semibold text-slate-900">Registrar producto</h2>
+            <div className={`flex items-center justify-between px-6 py-4 ${editando ? 'border-b border-slate-200' : 'border-b border-slate-100'}`}>
+              <h2 className={`${editando ? 'text-sm' : 'text-lg'} font-semibold text-slate-900`}>{editando ? 'Editar producto' : 'Registrar producto'}</h2>
               <button onClick={cerrarModal} className="text-slate-400 hover:text-slate-600">
                 <IconX className="w-5 h-5" />
               </button>
@@ -274,68 +407,81 @@ export default function Productos({ onNavigate }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              {editando && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-800">
+                  El código del producto no se puede modificar (identificador único).
+                </div>
+              )}
+
+              <div className={editando ? 'space-y-2' : 'grid grid-cols-2 gap-x-4 gap-y-3'}>
+                <label htmlFor="producto-nombre" className={`${editando ? '' : 'order-1'} ${editando ? 'block' : ''} text-xs font-medium text-slate-600`}>
+                  Nombre del producto *
+                </label>
                 <input
+                  id="producto-nombre"
                   name="nombre"
                   value={formData.nombre}
                   onChange={handleChange}
-                  placeholder="Nombre *"
+                  placeholder={editando ? undefined : 'Ej. Blazer Estructurado Mujer'}
                   required
-                  className="col-span-2 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  className={`${editando ? '' : 'order-3'} w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10`}
                 />
+                <label htmlFor="producto-identificador" className={`${editando ? '' : 'order-2'} ${editando ? 'block' : ''} text-xs font-medium text-slate-600`}>
+                  {editando ? 'Código' : 'Código / Identificador *'}
+                </label>
                 <input
+                  id="producto-identificador"
                   name="identificador"
                   value={formData.identificador}
                   onChange={handleChange}
-                  placeholder="Identificador único *"
+                  placeholder={editando ? undefined : 'ARR-001'}
                   required
-                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  disabled={Boolean(editando)}
+                  className={`${editando ? '' : 'order-4'} w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed`}
                 />
+                <label htmlFor="producto-categoria" className={`${editando ? 'block' : 'order-5 col-span-2'} text-xs font-medium text-slate-600`}>
+                  Categoría *
+                </label>
                 <select
+                  id="producto-categoria"
                   name="categoria"
                   value={formData.categoria}
                   onChange={handleChange}
                   required
-                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  className={`${editando ? '' : 'order-6 col-span-2'} w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10`}
                 >
                   <option value="" disabled>Categoría *</option>
                   {CATEGORIAS_DISPONIBLES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+                <label htmlFor="producto-descripcion" className={`${editando ? 'block' : 'order-7 col-span-2'} text-xs font-medium text-slate-600`}>
+                  {editando ? 'Descripción' : 'Descripción (opcional)'}
+                </label>
                 <textarea
+                  id="producto-descripcion"
                   name="descripcion"
                   value={formData.descripcion}
                   onChange={handleChange}
-                  placeholder="Descripción"
-                  rows={2}
-                  className="col-span-2 border border-slate-200 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  placeholder={editando ? undefined : 'Descripción breve del producto...'}
+                  rows={3}
+                  className={`${editando ? '' : 'order-8 col-span-2'} w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900/10`}
                 />
-                <label className="col-span-2 flex items-center gap-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    name="activo"
-                    checked={formData.activo}
-                    onChange={handleChange}
-                    className="w-4 h-4 rounded border-slate-300"
-                  />
-                  Producto activo
-                </label>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
                   onClick={cerrarModal}
-                  className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${editando ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2.5 text-sm font-medium bg-[#1e3a5f] hover:bg-[#254a75] text-white rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-semibold bg-[#1e3a5f] hover:bg-[#254a75] text-white rounded-lg transition-colors"
                 >
-                  Registrar producto
+                  {editando ? 'Guardar cambios' : 'Registrar producto'}
                 </button>
               </div>
             </form>

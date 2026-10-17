@@ -94,6 +94,17 @@ El servidor debe quedar corriendo en `http://localhost:8080`.
 
 Al arrancar por primera vez, se crea automáticamente un usuario **admin** por defecto (ver `DataInitializer.java` para las credenciales).
 
+Para probar el backend localmente sin PostgreSQL ni credenciales de Supabase, desde la raíz del proyecto ejecuta:
+
+```powershell
+cd .\backend
+$env:SPRING_PROFILES_ACTIVE = "local"
+$env:PORT = "8081"
+.\mvnw.cmd spring-boot:run
+```
+
+Este perfil usa una base H2 en memoria; los datos se eliminan al detener el servidor. Inicia sesión con el usuario local `admin` y la contraseña `Admin123`. Si usas el frontend en otro puerto, configura `VITE_API_URL` en `frontend/.env` con la URL del backend y reinicia Vite.
+
 ### 5. Correr el frontend
 
 En otra terminal, dentro de la carpeta `frontend`:
