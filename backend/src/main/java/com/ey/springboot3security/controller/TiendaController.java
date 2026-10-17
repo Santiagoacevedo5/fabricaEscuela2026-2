@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ey.springboot3security.dto.EncargadoDto;
 import com.ey.springboot3security.entity.Tienda;
 import com.ey.springboot3security.service.TiendaService;
 
@@ -33,6 +34,12 @@ public class TiendaController {
     @GetMapping
     public List<Tienda> listarTiendas() {
         return service.listarTiendas();
+    }
+
+    // Encargados de tienda que todavía no tienen tienda asignada (llena el desplegable)
+    @GetMapping("/encargados-disponibles")
+    public List<EncargadoDto> encargadosDisponibles() {
+        return service.listarEncargadosDisponibles();
     }
 
     // Endpoint añadido para HU3.5 - Editar Tienda

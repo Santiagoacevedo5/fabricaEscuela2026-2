@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../components/Modal';
+import Modal from './components/Modal';
+
+// /api/tiendas devuelve el encargado como UserInfo (campo "name"); /encargados-disponibles devuelve "nombre"
+const nombreDe = (e) => e.nombre ?? e.name;
 
 export default function Tiendas() {
   const [tiendas, setTiendas] = useState([]);
@@ -103,6 +106,12 @@ export default function Tiendas() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+
+    // HU3.5: confirmación antes de cambiar el estado
+    const original = tiendas.find((t) => t.id === editFormData.id);
+    if ((original?.activa !== false) !== editFormData.activa &&
+        !window.confirm(`¿Seguro que deseas ${editFormData.activa ? 'activar' : 'desactivar'} esta tienda?`)) return;
+
     try {
       const bodyPayload = {
         direccion: editFormData.direccion,
@@ -124,7 +133,7 @@ export default function Tiendas() {
         cargarEncargados();
         setTimeout(() => setMensajeExito(''), 4000);
       } else {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         alert(errorData.message || 'Error al actualizar la tienda');
       }
     } catch (e) {
@@ -149,7 +158,7 @@ export default function Tiendas() {
   return (
     <div style={{ backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif', minHeight: '100%' }}>
       <main style={{ padding: '30px 40px' }}>
-        
+
         {mensajeExito && (
           <div style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '12px 20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
             ✓ {mensajeExito}
@@ -214,7 +223,7 @@ export default function Tiendas() {
                     <td style={{ padding: '16px 20px', color: '#4b5563' }}>{t.direccion}</td>
                     <td style={{ padding: '16px 20px', color: '#4b5563' }}>{t.region}</td>
                     <td style={{ padding: '16px 20px', color: '#4b5563' }}>
-                      {t.encargado ? `${t.encargado.nombre}` : '—'}
+                      {t.encargado ? nombreDe(t.encargado) : '—'}
                     </td>
                     <td style={{ padding: '16px 20px' }}>
                       <span
@@ -360,3 +369,38 @@ export default function Tiendas() {
                 onChange={(e) => setEditFormData({ ...editFormData, encargadoId: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', backgroundColor: '#fff', fontSize: '14px', boxSizing: 'border-box' }}
               >
+                <option value="">Sin asignar</option>
+                {(() => {
+                  // el encargado actual no viene en "disponibles" porque ya está asignado a esta tienda
+                  const actual = tiendas.find((t) => t.id === editFormData.id)?.encargado;
+                  const opciones = actual ? [actual, ...encargados.filter((e) => e.id !== actual.id)] : encargados;
+                  return opciones.map((enc) => (
+                    <option key={enc.id} value={enc.id}>{nombreDe(enc)}</option>
+                  ));
+                })()}
+              </select>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer', marginBottom: '24px' }}>
+              <input
+                type="checkbox"
+                checked={editFormData.activa}
+                onChange={(e) => setEditFormData({ ...editFormData, activa: e.target.checked })}
+              />
+              Activar/desactivar
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" onClick={() => setModalEditarAbierto(false)} style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#f3f4f6', color: '#374151', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button type="submit" style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#1e3a5f', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
+                Confirmar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
