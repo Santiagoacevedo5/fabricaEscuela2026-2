@@ -21,7 +21,7 @@ public class MovimientoInventario {
     private Inventario inventario;
 
     @Column(nullable = false)
-    private String tipo; // ENTRADA o SALIDA
+    private String tipo; // ENTRADA, SALIDA o VENTA
 
     @Column(nullable = false)
     private Integer cantidad;
@@ -30,6 +30,8 @@ public class MovimientoInventario {
 
     @PrePersist
     void alCrear() {
-        fecha = LocalDateTime.now();
+        if (fecha == null || !"VENTA".equals(tipo)) {
+            fecha = LocalDateTime.now();
+        }
     }
 }

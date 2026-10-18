@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -48,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/tiendas", "/api/tiendas/**").permitAll()
                         .requestMatchers("/api/centros", "/api/centros/**").permitAll()
                         .requestMatchers("/api/resumen", "/api/resumen/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/inventario/ventas")
+                        .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_TIENDA")
                         .requestMatchers("/auth/user/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/auth/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
