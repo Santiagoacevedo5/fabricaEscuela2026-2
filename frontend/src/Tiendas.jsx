@@ -76,10 +76,17 @@ export default function Tiendas() {
     if (!validarFormulario()) return;
 
     try {
+      const bodyPayload = {
+        nombre: formData.nombre,
+        direccion: formData.direccion,
+        region: formData.region,
+        encargado: formData.encargadoId ? { id: Number(formData.encargadoId) } : null
+      };
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(bodyPayload)
       });
 
       if (res.ok) {
@@ -377,7 +384,6 @@ export default function Tiendas() {
               >
                 <option value="">Sin asignar</option>
                 {(() => {
-                  // el encargado actual no viene en "disponibles" porque ya está asignado a esta tienda
                   const actual = tiendas.find((t) => t.id === editFormData.id)?.encargado;
                   const opciones = actual ? [actual, ...encargados.filter((e) => e.id !== actual.id)] : encargados;
                   return opciones.map((enc) => (

@@ -27,4 +27,7 @@ public class Tienda {
     @OneToOne
     @JoinColumn(name = "encargado_id")
     private UserInfo encargado;
+
+    // Nuevo campo para HU3.5 (por defecto activa)
+    private Boolean activa = true;
 }

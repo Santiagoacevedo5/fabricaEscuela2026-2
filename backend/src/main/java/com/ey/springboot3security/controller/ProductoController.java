@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -33,6 +34,33 @@ public class ProductoController {
 
         // 3. Guardar el producto
         return ResponseEntity.status(201).body(productoRepository.save(producto));
+    }
+
+    @PutMapping("/{idProducto}")
+    public ResponseEntity<?> actualizarProducto(@PathVariable Long idProducto, @RequestBody Producto producto) {
+        if (producto.getNombre() == null || producto.getNombre().isBlank() ||
+            producto.getIdentificador() == null || producto.getIdentificador().isBlank() ||
+            producto.getCategoria() == null || producto.getCategoria().isBlank()) {
+            return ResponseEntity.badRequest().body("Error: Nombre, identificador y categoría son obligatorios.");
+        }
+
+        Optional<Producto> productoExistente = productoRepository.findById(idProducto);
+        if (productoExistente.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Optional<Producto> productoConIdentificador = productoRepository.findByIdentificador(producto.getIdentificador());
+        if (productoConIdentificador.isPresent() && !productoConIdentificador.get().getIdProducto().equals(idProducto)) {
+            return ResponseEntity.status(409).body("Error: El identificador de producto ya está registrado.");
+        }
+
+        Producto actualizado = productoExistente.get();
+        actualizado.setIdentificador(producto.getIdentificador());
+        actualizado.setNombre(producto.getNombre());
+        actualizado.setCategoria(producto.getCategoria());
+        actualizado.setDescripcion(producto.getDescripcion());
+        actualizado.setActivo(producto.isActivo());
+        return ResponseEntity.ok(productoRepository.save(actualizado));
     }
 
     @GetMapping
