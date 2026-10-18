@@ -8,12 +8,21 @@ const TITULOS = {
   crear: 'Crear inventario',
   entrada: 'Registrar entrada',
   salida: 'Registrar salida',
+  venta: 'Registrar venta',
 };
 
 const MENSAJES = {
   crear: 'Inventario creado exitosamente.',
   entrada: 'Entrada registrada exitosamente.',
   salida: 'Salida registrada exitosamente.',
+  venta: 'Venta registrada exitosamente.',
+};
+
+// Etiqueta y color de cada tipo de movimiento en la pestaña Movimientos
+const TIPO_MOV = {
+  ENTRADA: ['Entrada', 'bg-green-50 text-green-700'],
+  SALIDA: ['Salida', 'bg-orange-50 text-orange-700'],
+  VENTA: ['Venta', 'bg-blue-50 text-blue-700'],
 };
 
 // Dice si un inventario es de un CD o de una tienda, y su nombre
@@ -22,7 +31,7 @@ const ubicacion = (inv) =>
     ? { tipo: 'CD', nombre: inv.centroDistribucion.nombre }
     : { tipo: 'Tienda', nombre: inv.tienda?.nombre };
 
-export default function Inventario() {
+export default function Inventario({ puedeRegistrarVenta }) {
   const [pestana, setPestana] = useState('inventario');
   const [inventarios, setInventarios] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -32,7 +41,7 @@ export default function Inventario() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const [modal, setModal] = useState(null); // 'crear' | 'entrada' | 'salida' | null
+  const [modal, setModal] = useState(null); // 'crear' | 'entrada' | 'salida' | 'venta' | null
   const [form, setForm] = useState(FORM_INICIAL);
   const [errorModal, setErrorModal] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -81,8 +90,11 @@ export default function Inventario() {
 
   // ---------- MODAL ----------
 
+  const hoy = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD en hora local
+
   const abrirModal = (tipoModal) => {
-    setForm(FORM_INICIAL);
+    // la venta siempre es de una tienda, y la fecha arranca en hoy
+    setForm(tipoModal === 'venta' ? { ...FORM_INICIAL, tipo: 'Tienda', fecha: hoy } : FORM_INICIAL);
     setErrorModal('');
     setMensaje('');
     setModal(tipoModal);
@@ -100,7 +112,7 @@ export default function Inventario() {
         nuevo.productoId = '';
       }
       if (name === 'ubicacionId') {
-        // en entrada/salida la lista de productos depende de la ubicación
+        // en entrada/salida/venta la lista de productos depende de la ubicación
         nuevo.productoId = '';
       }
       return nuevo;
@@ -108,9 +120,10 @@ export default function Inventario() {
   };
 
   const ubicaciones = form.tipo === 'CD' ? centros : tiendas;
-  const esMovimiento = modal === 'entrada' || modal === 'salida';
+  const esVenta = modal === 'venta';
+  const esMovimiento = modal === 'entrada' || modal === 'salida' || esVenta;
 
-  // En entrada/salida solo se listan los productos que ya tienen inventario en esa ubicación
+  // En entrada/salida/venta solo se listan los productos que ya tienen inventario en esa ubicación
   const inventariosUbicacion = inventarios.filter((inv) =>
     form.tipo === 'CD'
       ? inv.centroDistribucion?.id === Number(form.ubicacionId)
@@ -121,18 +134,33 @@ export default function Inventario() {
     e.preventDefault();
     setErrorModal('');
 
-    if (!form.ubicacionId || !form.productoId || form.cantidad === '') {
+    if (!form.ubicacionId || !form.productoId || form.cantidad === '' || (esVenta && !form.fecha)) {
       setErrorModal('Todos los campos son obligatorios.');
       return;
     }
 
-    // En crear, productoId es el id del producto; en entrada/salida es el id del inventario elegido
-    const url = esMovimiento ? `${API}/api/inventario/movimientos` : `${API}/api/inventario`;
+    // Salida y venta no pueden superar el stock disponible (el backend también debe validarlo)
+    if (modal === 'salida' || esVenta) {
+      const inv = inventarios.find((i) => i.id === Number(form.productoId));
+      if (Number(form.cantidad) > (inv?.cantidad ?? 0)) {
+        setErrorModal(`Solo hay ${inv?.cantidad ?? 0} unidades disponibles.`);
+        return;
+      }
+    }
+
+    // En crear, productoId es el id del producto; en entrada/salida/venta es el id del inventario elegido
+    const url = esVenta
+      ? `${API}/api/inventario/ventas`
+      : esMovimiento
+        ? `${API}/api/inventario/movimientos`
+        : `${API}/api/inventario`;
     const body = esMovimiento
       ? {
           inventario: { id: Number(form.productoId) },
-          tipo: modal === 'entrada' ? 'ENTRADA' : 'SALIDA',
+          tipo: esVenta ? 'VENTA' : modal.toUpperCase(),
           cantidad: Number(form.cantidad),
+          // fecha elegida + hora actual, en el formato de un LocalDateTime
+          ...(esVenta && { fecha: `${form.fecha}T${new Date().toTimeString().slice(0, 8)}` }),
         }
       : {
           [form.tipo === 'CD' ? 'centroDistribucion' : 'tienda']: { id: Number(form.ubicacionId) },
@@ -200,6 +228,11 @@ export default function Inventario() {
             <button className={claseBoton} onClick={() => abrirModal('salida')}>
               + Registrar salida
             </button>
+            {puedeRegistrarVenta && (
+              <button className={claseBoton} onClick={() => abrirModal('venta')}>
+                + Registrar venta
+              </button>
+            )}
           </div>
         </div>
 
@@ -287,16 +320,13 @@ export default function Inventario() {
                 ) : (
                   movimientos.map((m) => {
                     const ub = ubicacion(m.inventario);
+                    const [etiquetaTipo, claseTipo] = TIPO_MOV[m.tipo];
                     return (
                       <tr key={m.id} className="border-b border-slate-100 last:border-0">
                         <td className={td}>{new Date(m.fecha).toLocaleString('es-CO')}</td>
                         <td className={td}>
-                          <span
-                            className={`text-xs font-medium rounded-full px-2 py-0.5 ${
-                              m.tipo === 'ENTRADA' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
-                            }`}
-                          >
-                            {m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida'}
+                          <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${claseTipo}`}>
+                            {etiquetaTipo}
                           </span>
                         </td>
                         <td className={td}>
@@ -314,7 +344,7 @@ export default function Inventario() {
         </div>
       </div>
 
-      {/* MODAL: CREAR INVENTARIO / REGISTRAR ENTRADA / REGISTRAR SALIDA */}
+      {/* MODAL: CREAR INVENTARIO / REGISTRAR ENTRADA / SALIDA / VENTA */}
       {modal && (
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
@@ -336,13 +366,15 @@ export default function Inventario() {
                 </div>
               )}
 
-              <div>
-                <label htmlFor="tipo" className={etiqueta}>Tipo</label>
-                <select id="tipo" name="tipo" value={form.tipo} onChange={handleChange} className={campo}>
-                  <option value="CD">Centro de distribución</option>
-                  <option value="Tienda">Tienda</option>
-                </select>
-              </div>
+              {modal !== 'venta' && (
+                <div>
+                  <label htmlFor="tipo" className={etiqueta}>Tipo</label>
+                  <select id="tipo" name="tipo" value={form.tipo} onChange={handleChange} className={campo}>
+                    <option value="CD">Centro de distribución</option>
+                    <option value="Tienda">Tienda</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label htmlFor="ubicacionId" className={etiqueta}>
@@ -408,6 +440,21 @@ export default function Inventario() {
                   className={campo}
                 />
               </div>
+
+              {esVenta && (
+                <div>
+                  <label htmlFor="fecha" className={etiqueta}>Fecha</label>
+                  <input
+                    id="fecha"
+                    type="date"
+                    name="fecha"
+                    value={form.fecha}
+                    max={hoy}
+                    onChange={handleChange}
+                    className={campo}
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

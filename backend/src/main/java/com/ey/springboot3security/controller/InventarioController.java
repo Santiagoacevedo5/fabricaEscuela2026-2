@@ -15,6 +15,7 @@ import com.ey.springboot3security.entity.MovimientoInventario;
 import com.ey.springboot3security.repository.MovimientoInventarioRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -86,33 +87,53 @@ public class InventarioController {
     @PostMapping("/movimientos")
     @Transactional // el movimiento y el cambio de stock se guardan juntos o ninguno
     public ResponseEntity<?> registrarMovimiento(@RequestBody MovimientoInventario movimiento) {
-        String tipo = movimiento.getTipo();
+        if ("VENTA".equals(movimiento.getTipo())) {
+            return ResponseEntity.badRequest().body("Error: Use el endpoint de ventas para registrar una venta.");
+        }
+        return guardarMovimiento(movimiento, false);
+    }
 
-        // 1. Validaciones de campos
-        if (!"ENTRADA".equals(tipo) && !"SALIDA".equals(tipo)) {
+    @PostMapping("/ventas")
+    @Transactional
+    public ResponseEntity<?> registrarVenta(@RequestBody MovimientoInventario movimiento) {
+        if (!"VENTA".equals(movimiento.getTipo())) {
+            return ResponseEntity.badRequest().body("Error: El tipo debe ser VENTA.");
+        }
+        return guardarMovimiento(movimiento, true);
+    }
+
+    private ResponseEntity<?> guardarMovimiento(MovimientoInventario movimiento, boolean venta) {
+        String tipo = movimiento.getTipo();
+        if (!venta && !"ENTRADA".equals(tipo) && !"SALIDA".equals(tipo)) {
             return ResponseEntity.badRequest().body("Error: El tipo debe ser ENTRADA o SALIDA.");
         }
         if (movimiento.getCantidad() == null || movimiento.getCantidad() <= 0) {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
+        if (venta && movimiento.getFecha() != null && movimiento.getFecha().isAfter(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body("Error: La fecha de la venta no puede ser futura.");
+        }
 
-        // 2. El inventario debe existir
         Long idInventario = movimiento.getInventario() == null ? null : movimiento.getInventario().getId();
         Inventario inventario = idInventario == null ? null : inventarioRepository.findById(idInventario).orElse(null);
         if (inventario == null) {
             return ResponseEntity.status(404).body("Error: El inventario no existe.");
         }
+        if (venta && inventario.getTienda() == null) {
+            return ResponseEntity.badRequest().body("Error: Las ventas solo se pueden registrar en una tienda.");
+        }
 
-        // 3. Calcular el nuevo stock; una salida no puede dejarlo negativo
-        int nuevaCantidad = "ENTRADA".equals(tipo)
-                ? inventario.getCantidad() + movimiento.getCantidad()
-                : inventario.getCantidad() - movimiento.getCantidad();
+        long nuevaCantidad = "ENTRADA".equals(tipo)
+                ? (long) inventario.getCantidad() + movimiento.getCantidad()
+                : (long) inventario.getCantidad() - movimiento.getCantidad();
         if (nuevaCantidad < 0) {
             return ResponseEntity.status(409).body("Error: Stock insuficiente. Disponible: " + inventario.getCantidad());
         }
+        if (nuevaCantidad > Integer.MAX_VALUE) {
+            return ResponseEntity.status(409).body("Error: La cantidad excede el máximo permitido.");
+        }
 
-        // 4. Guardar stock y movimiento
-        inventario.setCantidad(nuevaCantidad);
+        inventario.setCantidad((int) nuevaCantidad);
         inventarioRepository.save(inventario);
         movimiento.setInventario(inventario);
         movimiento.setId(null);

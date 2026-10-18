@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ROL_FULL_LABELS } from '../roles'
 
 const NAV_ITEMS = [
     {
@@ -112,7 +113,9 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
                     <div className="min-w-0">
                         <p className="text-white text-xs font-medium truncate">{usuario.nombre}</p>
                         <p className="text-xs truncate" style={{ color: 'rgba(148,163,184,0.7)' }}>
-                            Administrador
+                            {usuario.roles?.length
+                                ? usuario.roles.map(rol => ROL_FULL_LABELS[rol] || rol).join(', ')
+                                : 'Sin rol asignado'}
                         </p>
                     </div>
                 </div>

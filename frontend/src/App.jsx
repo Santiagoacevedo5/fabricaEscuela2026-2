@@ -7,6 +7,15 @@ import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
 import Inventario from './pages/Inventario'
 
+const cargarUsuario = async (token) => {
+    const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!respuesta.ok) {
+        throw new Error(`No se pudo cargar el usuario (${respuesta.status}).`)
+    }
+    return respuesta.json()
+}
 
 export default function App() {
     const [autenticado, setAutenticado] = useState(false)
@@ -19,7 +28,13 @@ export default function App() {
         const username = localStorage.getItem('username')
         if (token) {
             setAutenticado(true)
-            setUsuario({ nombre: username || 'Usuario' })
+            setUsuario({ nombre: username || 'Usuario', roles: [] })
+            cargarUsuario(token)
+                .then((datos) => setUsuario({ nombre: datos.username, roles: datos.roles }))
+                .catch((err) => {
+                    console.error('Error al cargar el usuario:', err)
+                    setUsuario({ nombre: username || 'Usuario', roles: [] })
+                })
             cargarEmpleados(token)
         }
     }, [])
@@ -86,9 +101,15 @@ export default function App() {
 
     if (!autenticado) {
         return <Login onLoginSuccess={(username) => {
-            setUsuario({ nombre: username })
+            setUsuario({ nombre: username, roles: [] })
             setAutenticado(true)
             const token = localStorage.getItem('token')
+            cargarUsuario(token)
+                .then((datos) => setUsuario({ nombre: datos.username, roles: datos.roles }))
+                .catch((err) => {
+                    console.error('Error al cargar el usuario:', err)
+                    setUsuario({ nombre: username, roles: [] })
+                })
             cargarEmpleados(token)
         }} />
     }
@@ -108,7 +129,10 @@ export default function App() {
             }
 
         if (view === 'inventario') {
-            return <Inventario />
+            const puedeRegistrarVenta = usuario?.roles?.some((rol) =>
+                ['ROLE_ADMIN', 'ENCARGADO_TIENDA'].includes(rol)
+            )
+            return <Inventario puedeRegistrarVenta={puedeRegistrarVenta} />
         }
 
         return (
