@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './components/Modal';
+import InventarioTienda from './pages/InventarioTienda';
 
 // /api/tiendas devuelve el encargado como UserInfo (campo "name"); /encargados-disponibles devuelve "nombre"
 const nombreDe = (e) => e.nombre ?? e.name;
 
 export default function Tiendas() {
+  const [tiendaInventario, setTiendaInventario] = useState(null);
   const [tiendas, setTiendas] = useState([]);
   const [encargados, setEncargados] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -74,8 +76,6 @@ export default function Tiendas() {
     if (!validarFormulario()) return;
 
     try {
-      // Enviamos "encargado": { id } igual que en el PUT de edición,
-      // para que Jackson lo mapee a la entidad Tienda.encargado
       const bodyPayload = {
         nombre: formData.nombre,
         direccion: formData.direccion,
@@ -163,6 +163,10 @@ export default function Tiendas() {
 
     return coincideTexto && coincideEstado;
   });
+
+  if (tiendaInventario) {
+    return <InventarioTienda tienda={tiendaInventario} onVolver={() => setTiendaInventario(null)} />;
+  }
 
   return (
     <div style={{ backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif', minHeight: '100%' }}>
@@ -253,7 +257,7 @@ export default function Tiendas() {
                     </td>
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#fff', color: '#374151', fontSize: '13px', cursor: 'pointer' }}>
+                        <button onClick={() => setTiendaInventario(t)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#fff', color: '#374151', fontSize: '13px', cursor: 'pointer' }}>
                           Ver inventario
                         </button>
                         <button onClick={() => abrirModalEditar(t)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#fff', color: '#374151', fontSize: '13px', cursor: 'pointer' }}>
@@ -380,7 +384,6 @@ export default function Tiendas() {
               >
                 <option value="">Sin asignar</option>
                 {(() => {
-                  // el encargado actual no viene en "disponibles" porque ya está asignado a esta tienda
                   const actual = tiendas.find((t) => t.id === editFormData.id)?.encargado;
                   const opciones = actual ? [actual, ...encargados.filter((e) => e.id !== actual.id)] : encargados;
                   return opciones.map((enc) => (
