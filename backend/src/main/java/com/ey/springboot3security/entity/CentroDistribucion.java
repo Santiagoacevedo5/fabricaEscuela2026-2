@@ -1,5 +1,6 @@
 package com.ey.springboot3security.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,9 +23,11 @@ public class CentroDistribucion {
     private Integer id;
     private String nombre;
     private String ubicacion;
+    private String estado;
 
     @OneToOne
     @JoinColumn(name = "encargado_id")
+    @JsonIgnoreProperties({"password", "confirmarPassword", "email", "documento"})
     private UserInfo encargado;
 
     private LocalDate fechaRegistro;

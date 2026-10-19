@@ -122,7 +122,7 @@ export default function App() {
             return <Tiendas />
         }
         if (view === 'centros'){
-            return <CentrosDistribucion />;
+            return <CentrosDistribucion puedeEditar={usuario?.roles?.includes('ROLE_ADMIN')} />;
             }
         if (view === 'productos'){
             return <Productos />;

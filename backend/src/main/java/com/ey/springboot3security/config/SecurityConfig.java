@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/welcome", "/auth/addNewUser", "/auth/generateToken").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/tiendas", "/api/tiendas/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/centros/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/centros", "/api/centros/**").permitAll()
                         .requestMatchers("/api/resumen", "/api/resumen/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/inventario/ventas")
