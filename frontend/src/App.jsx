@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import Layout from './components/Layout'
+import Layout from './components/layout'
 import Empleados from './pages/Empleados'
 import Tiendas from './Tiendas'
 import Login from './login'

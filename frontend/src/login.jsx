@@ -132,9 +132,6 @@ function Login({ onLoginSuccess }) {
 
           <div className="mt-6 text-center text-xs text-slate-400">
             <p>Acceso restringido · Solo personal autorizado</p>
-            <p className="mt-1">
-              Demo: <span className="font-mono">admin / Admin123</span>
-            </p>
           </div>
         </div>
       </div>
