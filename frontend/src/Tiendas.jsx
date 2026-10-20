@@ -11,6 +11,7 @@ export default function Tiendas() {
   const [encargados, setEncargados] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
+  const [confirmacionEstado, setConfirmacionEstado] = useState(false);
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [mensajeExito, setMensajeExito] = useState('');
@@ -102,6 +103,7 @@ export default function Tiendas() {
   };
 
   const abrirModalEditar = (tienda) => {
+    setConfirmacionEstado(false);
     setEditFormData({
       id: tienda.id,
       nombre: tienda.nombre || '',
@@ -116,11 +118,16 @@ export default function Tiendas() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
-    // HU3.5: confirmación antes de cambiar el estado
     const original = tiendas.find((t) => t.id === editFormData.id);
-    if ((original?.activa !== false) !== editFormData.activa &&
-        !window.confirm(`¿Seguro que deseas ${editFormData.activa ? 'activar' : 'desactivar'} esta tienda?`)) return;
+    if ((original?.activa !== false) !== editFormData.activa) {
+      setConfirmacionEstado(true);
+      return;
+    }
 
+    await actualizarTienda();
+  };
+
+  const actualizarTienda = async () => {
     try {
       const bodyPayload = {
         direccion: editFormData.direccion,
@@ -137,6 +144,7 @@ export default function Tiendas() {
 
       if (res.ok) {
         setModalEditarAbierto(false);
+        setConfirmacionEstado(false);
         setMensajeExito('Tienda actualizada exitosamente.');
         cargarTiendas();
         cargarEncargados();
@@ -169,8 +177,8 @@ export default function Tiendas() {
   }
 
   return (
-    <div style={{ backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif', minHeight: '100%' }}>
-      <main style={{ padding: '30px 40px' }}>
+    <div className="min-h-full bg-slate-100">
+      <main className="mx-auto w-full max-w-7xl p-6">
 
         {mensajeExito && (
           <div style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '12px 20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
@@ -178,31 +186,31 @@ export default function Tiendas() {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+        <div className="mb-6 flex items-start justify-between">
           <div>
-            <h1 style={{ margin: 0, fontSize: '26px', color: '#111827' }}>Tiendas</h1>
-            <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '14px' }}>Gestión de puntos de venta</p>
+            <h1 className="text-xl font-bold text-slate-900">Tiendas</h1>
+            <p className="mt-0.5 text-sm text-slate-500">Gestión de puntos de venta</p>
           </div>
           <button
             onClick={() => setModalAbierto(true)}
-            style={{ backgroundColor: '#1e3a5f', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+            className="data-table-primary-button"
           >
             + Registrar tienda
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+        <div className="mb-4 flex flex-wrap gap-3">
           <input
             type="text"
             placeholder="Buscar por nombre, región o dirección..."
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
-            style={{ flex: 1, padding: '10px 15px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', backgroundColor: '#fff', fontSize: '14px' }}
+            className="min-w-48 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            style={{ width: '180px', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff', fontSize: '14px', outline: 'none' }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="Todos">Todos</option>
             <option value="Activa">Activa</option>
@@ -210,58 +218,70 @@ export default function Tiendas() {
           </select>
         </div>
 
-        <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="data-table-card">
+          <div className="data-table-scroll">
+          <table className="data-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                <th style={{ padding: '14px 20px' }}>NOMBRE</th>
-                <th style={{ padding: '14px 20px' }}>DIRECCIÓN</th>
-                <th style={{ padding: '14px 20px' }}>REGIÓN</th>
-                <th style={{ padding: '14px 20px' }}>ENCARGADO</th>
-                <th style={{ padding: '14px 20px' }}>ESTADO</th>
-                <th style={{ padding: '14px 20px' }}>ACCIONES</th>
+              <tr>
+                <th>NOMBRE</th>
+                <th>DIRECCIÓN</th>
+                <th>REGIÓN</th>
+                <th>ENCARGADO</th>
+                <th>ESTADO</th>
+                <th>ACCIONES</th>
               </tr>
             </thead>
             <tbody>
               {tiendasFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ padding: '25px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                  <td colSpan="6">
                     No hay tiendas registradas.
                   </td>
                 </tr>
               ) : (
                 tiendasFiltradas.map((t) => (
-                  <tr key={t.id} style={{ borderBottom: '1px solid #f3f4f6', fontSize: '14px', color: '#1f2937' }}>
-                    <td style={{ padding: '16px 20px', fontWeight: '600' }}>{t.nombre}</td>
-                    <td style={{ padding: '16px 20px', color: '#4b5563' }}>{t.direccion}</td>
-                    <td style={{ padding: '16px 20px', color: '#4b5563' }}>{t.region}</td>
-                    <td style={{ padding: '16px 20px', color: '#4b5563' }}>
+                  <tr key={t.id}>
+                    <td className="font-medium text-slate-900">{t.nombre}</td>
+                    <td>{t.direccion}</td>
+                    <td>{t.region}</td>
+                    <td>
                       {t.encargado ? nombreDe(t.encargado) : '—'}
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <span
-                        style={{
-                          backgroundColor: t.activa === false ? '#fee2e2' : '#dcfce7',
-                          color: t.activa === false ? '#dc2626' : '#16a34a',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        • {t.activa === false ? 'Inactiva' : 'Activa'}
+                    <td>
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        t.activa === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          t.activa === false ? 'bg-red-500' : 'bg-green-500'
+                        }`} />
+                        {t.activa === false ? 'Inactiva' : 'Activa'}
                       </span>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setTiendaInventario(t)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#fff', color: '#374151', fontSize: '13px', cursor: 'pointer' }}>
-                          Ver inventario
+                    <td>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTiendaInventario(t)}
+                          aria-label={`Ver inventario de ${t.nombre}`}
+                          title="Ver inventario"
+                          className="data-table-action"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 12s3.5-7 9.75-7 9.75 7 9.75 7-3.5 7-9.75 7-9.75-7-9.75-7Z" />
+                            <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                          </svg>
                         </button>
-                        <button onClick={() => abrirModalEditar(t)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#fff', color: '#374151', fontSize: '13px', cursor: 'pointer' }}>
-                          Editar
+                        <button
+                          type="button"
+                          onClick={() => abrirModalEditar(t)}
+                          aria-label={`Editar ${t.nombre}`}
+                          title="Editar"
+                          className="data-table-action"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -270,7 +290,8 @@ export default function Tiendas() {
               )}
             </tbody>
           </table>
-          <div style={{ padding: '15px 20px', fontSize: '12px', color: '#9ca3af', borderTop: '1px solid #e5e7eb' }}>
+          </div>
+          <div className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400">
             {tiendasFiltradas.length} de {tiendas.length} tiendas
           </div>
         </div>
@@ -341,7 +362,39 @@ export default function Tiendas() {
 
       {/* Modal Editar Tienda reutilizando <Modal /> (HU3.5) */}
       {modalEditarAbierto && (
-        <Modal title="Editar tienda" onClose={() => setModalEditarAbierto(false)}>
+        <Modal
+          title={confirmacionEstado ? 'Confirmar cambio de estado' : 'Editar tienda'}
+          onClose={() => {
+            setConfirmacionEstado(false);
+            setModalEditarAbierto(false);
+          }}
+        >
+          {confirmacionEstado ? (
+            <div>
+              <p style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>
+                ¿Seguro que deseas {editFormData.activa ? 'activar' : 'desactivar'} esta tienda?
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#6b7280' }}>
+                {editFormData.nombre}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmacionEstado(false)}
+                  style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#f3f4f6', color: '#374151', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                >
+                  Volver
+                </button>
+                <button
+                  type="button"
+                  onClick={actualizarTienda}
+                  style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', backgroundColor: editFormData.activa ? '#15803d' : '#dc2626', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                >
+                  Sí, {editFormData.activa ? 'activar' : 'desactivar'}
+                </button>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleEditSubmit}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Nombre de tienda *</label>
@@ -411,6 +464,7 @@ export default function Tiendas() {
               </button>
             </div>
           </form>
+          )}
         </Modal>
       )}
     </div>

@@ -14,6 +14,7 @@ public interface TiendaRepository extends JpaRepository<Tienda, Integer> {
 
     // ¿El encargado ya está asignado a una tienda distinta de la que se edita?
     boolean existsByEncargadoIdAndIdNot(Integer encargadoId, Integer id);
+    boolean existsByEncargado_Id(Integer encargadoId);
 
     // Empleados con rol de encargado de tienda que aún no tienen ninguna tienda asignada
     @Query("SELECT new com.ey.springboot3security.dto.EncargadoDto(u.id, u.name) FROM UserInfo u "

@@ -83,7 +83,7 @@ export default function InventarioTienda({ tienda, onVolver }) {
   }
 
   return (
-    <div className="p-6">
+    <div className="mx-auto w-full max-w-7xl p-6 md:p-8">
       <button onClick={onVolver} className="text-sm text-slate-600 hover:text-slate-900 mb-3">
         ← Volver a Tiendas
       </button>
@@ -94,7 +94,7 @@ export default function InventarioTienda({ tienda, onVolver }) {
           onClick={abrirModal}
           disabled={tienda.activa === false}
           title={tienda.activa === false ? 'La tienda está inactiva' : ''}
-          className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="data-table-primary-button"
         >
           + Agregar Producto
         </button>
@@ -106,21 +106,22 @@ export default function InventarioTienda({ tienda, onVolver }) {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
+      <div className="data-table-card">
+        <div className="data-table-scroll">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-5 py-3 font-medium">ID</th>
-              <th className="px-5 py-3 font-medium">Nombre del producto</th>
-              <th className="px-5 py-3 font-medium">Unidades disponibles</th>
+              <th>ID</th>
+              <th>Nombre del producto</th>
+              <th>Unidades disponibles</th>
             </tr>
           </thead>
           <tbody>
             {items.map((i) => (
-              <tr key={i.id} className="border-t border-slate-100">
-                <td className="px-5 py-3">{i.producto?.identificador ?? i.producto?.idProducto}</td>
-                <td className="px-5 py-3">{i.producto?.nombre}</td>
-                <td className="px-5 py-3">
+              <tr key={i.id}>
+                <td>{i.producto?.identificador ?? i.producto?.idProducto}</td>
+                <td>{i.producto?.nombre}</td>
+                <td>
                   {i.cantidad === 0 ? (
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
                       Sin existencias
@@ -133,13 +134,14 @@ export default function InventarioTienda({ tienda, onVolver }) {
             ))}
             {!cargando && items.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-5 py-8 text-center text-slate-400">
+                <td colSpan={3}>
                   Esta tienda aún no tiene productos en su inventario.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modal && (

@@ -8,14 +8,12 @@ const TITULOS = {
   crear: 'Crear inventario',
   entrada: 'Registrar entrada',
   salida: 'Registrar salida',
-  venta: 'Registrar venta',
 };
 
 const MENSAJES = {
   crear: 'Inventario creado exitosamente.',
   entrada: 'Entrada registrada exitosamente.',
   salida: 'Salida registrada exitosamente.',
-  venta: 'Venta registrada exitosamente.',
 };
 
 // Etiqueta y color de cada tipo de movimiento en la pestaña Movimientos
@@ -31,7 +29,7 @@ const ubicacion = (inv) =>
     ? { tipo: 'CD', nombre: inv.centroDistribucion.nombre }
     : { tipo: 'Tienda', nombre: inv.tienda?.nombre };
 
-export default function Inventario({ puedeRegistrarVenta }) {
+export default function Inventario() {
   const [pestana, setPestana] = useState('inventario');
   const [inventarios, setInventarios] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -41,7 +39,7 @@ export default function Inventario({ puedeRegistrarVenta }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const [modal, setModal] = useState(null); // 'crear' | 'entrada' | 'salida' | 'venta' | null
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(FORM_INICIAL);
   const [errorModal, setErrorModal] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -90,11 +88,8 @@ export default function Inventario({ puedeRegistrarVenta }) {
 
   // ---------- MODAL ----------
 
-  const hoy = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD en hora local
-
   const abrirModal = (tipoModal) => {
-    // la venta siempre es de una tienda, y la fecha arranca en hoy
-    setForm(tipoModal === 'venta' ? { ...FORM_INICIAL, tipo: 'Tienda', fecha: hoy } : FORM_INICIAL);
+    setForm(FORM_INICIAL);
     setErrorModal('');
     setMensaje('');
     setModal(tipoModal);
@@ -112,7 +107,7 @@ export default function Inventario({ puedeRegistrarVenta }) {
         nuevo.productoId = '';
       }
       if (name === 'ubicacionId') {
-        // en entrada/salida/venta la lista de productos depende de la ubicación
+        // en los movimientos, la lista de productos depende de la ubicación
         nuevo.productoId = '';
       }
       return nuevo;
@@ -120,10 +115,9 @@ export default function Inventario({ puedeRegistrarVenta }) {
   };
 
   const ubicaciones = form.tipo === 'CD' ? centros : tiendas;
-  const esVenta = modal === 'venta';
-  const esMovimiento = modal === 'entrada' || modal === 'salida' || esVenta;
+  const esMovimiento = modal === 'entrada' || modal === 'salida';
 
-  // En entrada/salida/venta solo se listan los productos que ya tienen inventario en esa ubicación
+  // En los movimientos solo se listan los productos que ya tienen inventario en esa ubicación
   const inventariosUbicacion = inventarios.filter((inv) =>
     form.tipo === 'CD'
       ? inv.centroDistribucion?.id === Number(form.ubicacionId)
@@ -134,13 +128,12 @@ export default function Inventario({ puedeRegistrarVenta }) {
     e.preventDefault();
     setErrorModal('');
 
-    if (!form.ubicacionId || !form.productoId || form.cantidad === '' || (esVenta && !form.fecha)) {
+    if (!form.ubicacionId || !form.productoId || form.cantidad === '') {
       setErrorModal('Todos los campos son obligatorios.');
       return;
     }
 
-    // Salida y venta no pueden superar el stock disponible (el backend también debe validarlo)
-    if (modal === 'salida' || esVenta) {
+    if (modal === 'salida') {
       const inv = inventarios.find((i) => i.id === Number(form.productoId));
       if (Number(form.cantidad) > (inv?.cantidad ?? 0)) {
         setErrorModal(`Solo hay ${inv?.cantidad ?? 0} unidades disponibles.`);
@@ -148,19 +141,15 @@ export default function Inventario({ puedeRegistrarVenta }) {
       }
     }
 
-    // En crear, productoId es el id del producto; en entrada/salida/venta es el id del inventario elegido
-    const url = esVenta
-      ? `${API}/api/inventario/ventas`
-      : esMovimiento
+    // En crear, productoId es el id del producto; en movimientos, es el id del inventario elegido
+    const url = esMovimiento
         ? `${API}/api/inventario/movimientos`
         : `${API}/api/inventario`;
     const body = esMovimiento
       ? {
           inventario: { id: Number(form.productoId) },
-          tipo: esVenta ? 'VENTA' : modal.toUpperCase(),
+          tipo: modal.toUpperCase(),
           cantidad: Number(form.cantidad),
-          // fecha elegida + hora actual, en el formato de un LocalDateTime
-          ...(esVenta && { fecha: `${form.fecha}T${new Date().toTimeString().slice(0, 8)}` }),
         }
       : {
           [form.tipo === 'CD' ? 'centroDistribucion' : 'tienda']: { id: Number(form.ubicacionId) },
@@ -198,11 +187,6 @@ export default function Inventario({ puedeRegistrarVenta }) {
         : 'border-transparent text-slate-500 hover:text-slate-700'
     }`;
 
-  const claseBoton =
-    'flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#254a75] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors';
-
-  const th = 'text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3';
-  const td = 'px-5 py-3.5 text-sm text-slate-700';
   const etiqueta = 'block text-sm font-medium text-slate-700 mb-1.5';
   const campo =
     'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10';
@@ -211,7 +195,7 @@ export default function Inventario({ puedeRegistrarVenta }) {
 
   return (
     <div className="p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto w-full max-w-7xl">
         {/* ENCABEZADO */}
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
@@ -219,20 +203,15 @@ export default function Inventario({ puedeRegistrarVenta }) {
             <p className="text-sm text-slate-500 mt-1">Inventario de centros de distribución y tiendas</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button className={claseBoton} onClick={() => abrirModal('crear')}>
+            <button className="data-table-primary-button" onClick={() => abrirModal('crear')}>
               + Crear inventario
             </button>
-            <button className={claseBoton} onClick={() => abrirModal('entrada')}>
+            <button className="data-table-primary-button" onClick={() => abrirModal('entrada')}>
               + Registrar entrada
             </button>
-            <button className={claseBoton} onClick={() => abrirModal('salida')}>
+            <button className="data-table-primary-button" onClick={() => abrirModal('salida')}>
               + Registrar salida
             </button>
-            {puedeRegistrarVenta && (
-              <button className={claseBoton} onClick={() => abrirModal('venta')}>
-                + Registrar venta
-              </button>
-            )}
           </div>
         </div>
 
@@ -257,16 +236,17 @@ export default function Inventario({ puedeRegistrarVenta }) {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <div className="data-table-card">
+          <div className="data-table-scroll">
           {pestana === 'inventario' ? (
-            <table className="w-full">
+            <table className="data-table">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={th}>Tipo</th>
-                  <th className={th}>Ubicación</th>
-                  <th className={th}>ID</th>
-                  <th className={th}>Producto</th>
-                  <th className={th}>Cantidad disponible</th>
+                  <th>Tipo</th>
+                  <th>Ubicación</th>
+                  <th>ID</th>
+                  <th>Producto</th>
+                  <th>Cantidad disponible</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,11 +261,11 @@ export default function Inventario({ puedeRegistrarVenta }) {
                     const ub = ubicacion(inv);
                     return (
                       <tr key={inv.id} className="border-b border-slate-100 last:border-0">
-                        <td className={td}>{ub.tipo}</td>
-                        <td className={td}>{ub.nombre}</td>
-                        <td className={`${td} font-mono text-xs text-slate-500`}>{inv.producto.identificador}</td>
-                        <td className={`${td} font-medium text-slate-900`}>{inv.producto.nombre}</td>
-                        <td className={td}>
+                        <td>{ub.tipo}</td>
+                        <td>{ub.nombre}</td>
+                        <td>{inv.producto.identificador}</td>
+                        <td className="font-medium text-slate-900">{inv.producto.nombre}</td>
+                        <td>
                           {inv.cantidad}
                           {inv.cantidad === 0 && (
                             <span className="ml-2 text-xs text-red-700 bg-red-50 rounded-full px-2 py-0.5">
@@ -300,14 +280,14 @@ export default function Inventario({ puedeRegistrarVenta }) {
               </tbody>
             </table>
           ) : (
-            <table className="w-full">
+            <table className="data-table">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className={th}>Fecha y hora</th>
-                  <th className={th}>Tipo</th>
-                  <th className={th}>Ubicación</th>
-                  <th className={th}>Producto</th>
-                  <th className={th}>Cantidad</th>
+                  <th>Fecha y hora</th>
+                  <th>Tipo</th>
+                  <th>Ubicación</th>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
                 </tr>
               </thead>
               <tbody>
@@ -323,17 +303,17 @@ export default function Inventario({ puedeRegistrarVenta }) {
                     const [etiquetaTipo, claseTipo] = TIPO_MOV[m.tipo];
                     return (
                       <tr key={m.id} className="border-b border-slate-100 last:border-0">
-                        <td className={td}>{new Date(m.fecha).toLocaleString('es-CO')}</td>
-                        <td className={td}>
+                        <td>{new Date(m.fecha).toLocaleString('es-CO')}</td>
+                        <td>
                           <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${claseTipo}`}>
                             {etiquetaTipo}
                           </span>
                         </td>
-                        <td className={td}>
+                        <td>
                           {ub.tipo} - {ub.nombre}
                         </td>
-                        <td className={`${td} font-medium text-slate-900`}>{m.inventario.producto.nombre}</td>
-                        <td className={td}>{m.cantidad}</td>
+                        <td className="font-medium text-slate-900">{m.inventario.producto.nombre}</td>
+                        <td>{m.cantidad}</td>
                       </tr>
                     );
                   })
@@ -341,10 +321,11 @@ export default function Inventario({ puedeRegistrarVenta }) {
               </tbody>
             </table>
           )}
+          </div>
         </div>
       </div>
 
-      {/* MODAL: CREAR INVENTARIO / REGISTRAR ENTRADA / SALIDA / VENTA */}
+      {/* MODAL: CREAR INVENTARIO / REGISTRAR ENTRADA / SALIDA */}
       {modal && (
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
@@ -366,15 +347,13 @@ export default function Inventario({ puedeRegistrarVenta }) {
                 </div>
               )}
 
-              {modal !== 'venta' && (
-                <div>
-                  <label htmlFor="tipo" className={etiqueta}>Tipo</label>
-                  <select id="tipo" name="tipo" value={form.tipo} onChange={handleChange} className={campo}>
-                    <option value="CD">Centro de distribución</option>
-                    <option value="Tienda">Tienda</option>
-                  </select>
-                </div>
-              )}
+              <div>
+                <label htmlFor="tipo" className={etiqueta}>Tipo</label>
+                <select id="tipo" name="tipo" value={form.tipo} onChange={handleChange} className={campo}>
+                  <option value="CD">Centro de distribución</option>
+                  <option value="Tienda">Tienda</option>
+                </select>
+              </div>
 
               <div>
                 <label htmlFor="ubicacionId" className={etiqueta}>
@@ -440,21 +419,6 @@ export default function Inventario({ puedeRegistrarVenta }) {
                   className={campo}
                 />
               </div>
-
-              {esVenta && (
-                <div>
-                  <label htmlFor="fecha" className={etiqueta}>Fecha</label>
-                  <input
-                    id="fecha"
-                    type="date"
-                    name="fecha"
-                    value={form.fecha}
-                    max={hoy}
-                    onChange={handleChange}
-                    className={campo}
-                  />
-                </div>
-              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

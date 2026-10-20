@@ -27,6 +27,7 @@ public class UserInfo {
     private String confirmarPassword;
     private String roles;
     private String documento;
+    private String contacto;
     private String estado;
     private LocalDate fechaRegistro;
 }

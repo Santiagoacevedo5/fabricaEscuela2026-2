@@ -13,6 +13,7 @@ import java.util.List;
 public interface UserInfoRepository extends JpaRepository<UserInfo, Integer> {
     Optional<UserInfo> findByUsername(String username);
     boolean existsByEmail(String email);
+    boolean existsByEmailAndUsernameNot(String email, String username);
     boolean existsByDocumento(String documento);
     boolean existsByUsername(String username);
     List<UserInfo> findByRolesContaining(String roles);

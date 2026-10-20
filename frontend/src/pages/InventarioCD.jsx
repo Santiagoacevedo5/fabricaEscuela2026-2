@@ -107,7 +107,7 @@ export default function InventarioCD({ centro, onVolver }) {
     }
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="mx-auto w-full max-w-7xl p-6 md:p-8">
             <button onClick={onVolver} className="text-sm text-slate-600 hover:text-slate-900 mb-3">
                 ← Volver a Centros de Distribución
             </button>
@@ -119,8 +119,7 @@ export default function InventarioCD({ centro, onVolver }) {
                     onClick={abrirModal}
                     disabled={!activo}
                     title={activo ? '' : 'El centro de distribución está inactivo'}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#1e3a5f' }}
+                    className="data-table-primary-button"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -151,9 +150,9 @@ export default function InventarioCD({ centro, onVolver }) {
             )}
 
             {/* Tabla */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+            <div className="data-table-card">
+                <div className="data-table-scroll">
+                    <table className="data-table">
                         <thead>
                         <tr style={{ backgroundColor: '#f8fafc' }}>
                             {['ID', 'Nombre del producto', 'Cantidad disponible'].map(h => (

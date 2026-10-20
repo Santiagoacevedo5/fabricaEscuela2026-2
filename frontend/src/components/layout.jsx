@@ -47,19 +47,33 @@ const NAV_ITEMS = [
             </svg>
         ),
     },
+    {
+        view: 'ventas',
+        label: 'Ventas',
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l2.4 12.2a2 2 0 002 1.6h8.8a2 2 0 002-1.6L22 8H6m4 13a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
+            </svg>
+        ),
+    },
 ]
 
 export default function Layout({ currentView, onViewChange, onLogout, usuario, children }) {
     const [mobileOpen, setMobileOpen] = useState(false)
+    const [sidebarColapsado, setSidebarColapsado] = useState(false)
+    const navItems = NAV_ITEMS.filter(item =>
+        item.view !== 'ventas' ||
+        usuario?.roles?.some(rol => ['ROLE_ADMIN', 'ENCARGADO_TIENDA'].includes(rol))
+    )
 
-    const Sidebar = () => (
+    const renderSidebar = (compacto = false, mostrarControl = true) => (
         <aside
             className="flex flex-col h-full"
-            style={{ backgroundColor: '#1e3a5f', minWidth: 220 }}
+            style={{ backgroundColor: '#1e3a5f', width: compacto ? 72 : 220 }}
         >
             {/* Logo */}
-            <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="flex items-center gap-2.5">
+            <div className={`flex items-center ${compacto ? 'flex-col gap-3 px-2' : 'justify-between px-5'} py-5`} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <div className={`flex items-center ${compacto ? '' : 'gap-2.5'}`}>
                     <div
                         className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: '#2563eb' }}
@@ -68,60 +82,86 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                         </svg>
                     </div>
-                    <span className="text-white font-semibold text-sm tracking-tight">WebZaraV.1</span>
+                    {!compacto && <span className="text-white font-semibold text-sm tracking-tight">WebZaraV.1</span>}
                 </div>
+                {mostrarControl && (
+                    <button
+                        type="button"
+                        onClick={() => setSidebarColapsado(value => !value)}
+                        aria-label={compacto ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+                        aria-expanded={!compacto}
+                        title={compacto ? 'Expandir menú' : 'Contraer menú'}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                        <svg className={`h-4 w-4 transition-transform ${compacto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m15 18-6-6 6-6" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* Navegación */}
-            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                <p
-                    className="px-2 pb-2 text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: 'rgba(148,163,184,0.6)', letterSpacing: '0.1em' }}
-                >
-                    Sistema
-                </p>
-                {NAV_ITEMS.map(item => {
+            <nav aria-label="Navegación principal" className={`flex-1 py-4 ${compacto ? 'px-2' : 'px-3'} space-y-0.5 overflow-y-auto`}>
+                {!compacto && (
+                    <p
+                        className="px-2 pb-2 text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: 'rgba(148,163,184,0.6)', letterSpacing: '0.1em' }}
+                    >
+                        Sistema
+                    </p>
+                )}
+                {navItems.map(item => {
                     const active = currentView === item.view
                     return (
                         <button
                             key={item.view}
                             onClick={() => { onViewChange(item.view); setMobileOpen(false) }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left"
+                            aria-label={item.label}
+                            aria-current={active ? 'page' : undefined}
+                            title={compacto ? item.label : undefined}
+                            className={`flex w-full items-center rounded-lg py-2 text-sm font-medium transition-all ${
+                                compacto ? 'justify-center px-0' : 'gap-2.5 px-3 text-left'
+                            }`}
                             style={{
                                 backgroundColor: active ? 'rgba(37,99,235,0.3)' : 'transparent',
                                 color: active ? '#ffffff' : 'rgba(203,213,225,0.8)',
                             }}
                         >
-              <span style={{ color: active ? '#60a5fa' : 'rgba(148,163,184,0.7)' }}>
-                {item.icon}
-              </span>
-                            {item.label}
+                            <span className="flex shrink-0" style={{ color: active ? '#60a5fa' : 'rgba(148,163,184,0.7)' }}>
+                                {item.icon}
+                            </span>
+                            {!compacto && item.label}
                         </button>
                     )
                 })}
             </nav>
 
             {/* Usuario */}
-            <div className="px-4 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="flex items-center gap-3 mb-3">
+            <div className={`${compacto ? 'px-2' : 'px-4'} py-4`} style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <div className={`mb-3 flex items-center ${compacto ? 'justify-center' : 'gap-3'}`}>
                     <div
+                        title={compacto ? usuario.nombre : undefined}
                         className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
                         style={{ backgroundColor: '#2563eb' }}
                     >
                         {usuario.nombre.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
+                    {!compacto && <div className="min-w-0">
                         <p className="text-white text-xs font-medium truncate">{usuario.nombre}</p>
                         <p className="text-xs truncate" style={{ color: 'rgba(148,163,184,0.7)' }}>
                             {usuario.roles?.length
                                 ? usuario.roles.map(rol => ROL_FULL_LABELS[rol] || rol).join(', ')
                                 : 'Sin rol asignado'}
                         </p>
-                    </div>
+                    </div>}
                 </div>
                 <button
                     onClick={onLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors"
+                    aria-label="Cerrar sesión"
+                    title={compacto ? 'Cerrar sesión' : undefined}
+                    className={`flex w-full items-center rounded-lg py-2 text-xs transition-colors ${
+                        compacto ? 'justify-center px-0' : 'gap-2 px-3'
+                    }`}
                     style={{ color: 'rgba(148,163,184,0.8)' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -129,7 +169,7 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
-                    Cerrar sesión
+                    {!compacto && 'Cerrar sesión'}
                 </button>
             </div>
         </aside>
@@ -138,8 +178,11 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
     return (
         <div className="flex h-full overflow-hidden">
             {/* Barra lateral (escritorio) */}
-            <div className="hidden md:flex flex-col flex-shrink-0" style={{ width: 220 }}>
-                <Sidebar />
+            <div
+                className="hidden md:flex flex-col flex-shrink-0 transition-[width] duration-200"
+                style={{ width: sidebarColapsado ? 72 : 220 }}
+            >
+                {renderSidebar(sidebarColapsado)}
             </div>
 
             {/* Barra lateral (móvil) */}
@@ -151,7 +194,7 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
                         onClick={() => setMobileOpen(false)}
                     />
                     <div className="relative z-50 flex flex-col w-60 h-full">
-                        <Sidebar />
+                        {renderSidebar(false, false)}
                     </div>
                 </div>
             )}
@@ -171,7 +214,7 @@ export default function Layout({ currentView, onViewChange, onLogout, usuario, c
                         </svg>
                     </button>
                     <span className="font-semibold text-slate-900 text-sm">
-            {NAV_ITEMS.find(n => n.view === currentView)?.label}
+            {navItems.find(n => n.view === currentView)?.label}
           </span>
                 </div>
 
