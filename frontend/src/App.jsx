@@ -6,6 +6,7 @@ import Login from './login'
 import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
 import Inventario from './pages/Inventario'
+import Ventas from './pages/Ventas'
 
 const cargarUsuario = async (token) => {
     const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
@@ -54,6 +55,7 @@ export default function App() {
                 nombre: emp.name,
                 correo: emp.email,
                 documento: emp.documento,
+                contacto: emp.contacto,
                 usuario: emp.username,
                 rol: emp.roles,
                 estado: (emp.estado || '').toLowerCase(),
@@ -116,7 +118,11 @@ export default function App() {
 
     const renderView = () => {
         if (view === 'empleados') {
-            return <Empleados empleados={empleados} onChange={setEmpleados} />
+            return <Empleados
+                empleados={empleados}
+                onChange={setEmpleados}
+                puedeEditar={usuario?.roles?.includes('ROLE_ADMIN')}
+            />
         }
         if (view === 'tiendas') {
             return <Tiendas />
@@ -129,10 +135,12 @@ export default function App() {
             }
 
         if (view === 'inventario') {
-            const puedeRegistrarVenta = usuario?.roles?.some((rol) =>
-                ['ROLE_ADMIN', 'ENCARGADO_TIENDA'].includes(rol)
-            )
-            return <Inventario puedeRegistrarVenta={puedeRegistrarVenta} />
+            return <Inventario />
+        }
+        if (view === 'ventas' && usuario?.roles?.some((rol) =>
+            ['ROLE_ADMIN', 'ENCARGADO_TIENDA'].includes(rol)
+        )) {
+            return <Ventas />
         }
 
         return (

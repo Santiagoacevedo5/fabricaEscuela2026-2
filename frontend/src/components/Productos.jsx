@@ -197,18 +197,16 @@ export default function Productos({ onNavigate }) {
   });
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f9', fontFamily: 'Segoe UI, sans-serif' }}>
-      <main style={{ flex: 1, padding: '30px 40px' }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="mx-auto w-full max-w-7xl p-6">
         {/* ENCABEZADO */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Productos</h1>
+            <h1 className="text-xl font-bold text-slate-900">Productos</h1>
             <p className="text-sm text-slate-500 mt-1">Catálogo de productos del sistema</p>
           </div>
           <button
             onClick={abrirModalRegistro}
-            className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#254a75] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            className="data-table-primary-button"
           >
             <IconPlus className="w-4 h-4" />
             Registrar producto
@@ -271,20 +269,21 @@ export default function Productos({ onNavigate }) {
         )}
 
         {/* BUSCADOR Y FILTROS */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <IconSearch className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="mb-4 flex flex-wrap gap-3">
+          <div className="relative min-w-48 flex-1">
+            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por nombre, código o categoría..."
-              className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <select
             value={filtroCategoria}
             onChange={(e) => setFiltroCategoria(e.target.value)}
-            className="border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-700 sm:min-w-[190px] focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todas las categorías</option>
             {categorias.map((c) => (
@@ -294,7 +293,7 @@ export default function Productos({ onNavigate }) {
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-700 sm:min-w-[190px] focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todos los estados</option>
             <option value="activo">Activos</option>
@@ -303,17 +302,17 @@ export default function Productos({ onNavigate }) {
         </div>
 
         {/* TABLA */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+        <div className="data-table-card">
+          <div className="data-table-scroll">
+            <table className="data-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Código</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Nombre</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoría</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Descripción</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
-                  <th className="px-4 py-3" />
+                <tr>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                  <th className="products-actions">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -350,13 +349,13 @@ export default function Productos({ onNavigate }) {
                           {p.activo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="products-actions">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => abrirModalEdicion(p)}
                             aria-label={`Editar ${p.nombre}`}
                             title="Editar producto"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
+                            className="data-table-action focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
                           >
                             <IconPencil className="h-4 w-4" />
                           </button>
@@ -364,7 +363,8 @@ export default function Productos({ onNavigate }) {
                           onClick={() => setEstadoPendiente(p)}
                           aria-label={`${p.activo ? 'Desactivar' : 'Activar'} ${p.nombre}`}
                           title={`${p.activo ? 'Desactivar' : 'Activar'} producto`}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md focus:outline-none focus:ring-2 ${
+                          data-variant={p.activo ? 'danger' : 'success'}
+                          className={`data-table-action focus:outline-none focus:ring-2 ${
                             p.activo
                               ? 'text-red-500 hover:bg-red-50 focus:ring-red-500/20'
                               : 'text-green-600 hover:bg-green-50 focus:ring-green-500/20'
@@ -382,11 +382,9 @@ export default function Productos({ onNavigate }) {
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* PIE / CONTEO */}
-        <div className="flex items-center justify-between text-sm text-slate-500 mt-4">
-          <span>{productosFiltrados.length} de {productos.length} productos</span>
+          <div className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400">
+            {productosFiltrados.length} de {productos.length} productos
+          </div>
         </div>
 
       {/* MODAL: REGISTRAR / EDITAR PRODUCTO */}
@@ -488,8 +486,6 @@ export default function Productos({ onNavigate }) {
           </div>
         </div>
       )}
-      </div>
-      </main>
     </div>
   );
 }

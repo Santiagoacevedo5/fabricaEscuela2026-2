@@ -1,6 +1,7 @@
 package com.ey.springboot3security.controller;
 
 import com.ey.springboot3security.entity.AuthRequest;
+import com.ey.springboot3security.entity.EmpleadoUpdateRequest;
 import com.ey.springboot3security.entity.UserInfo;
 import com.ey.springboot3security.service.JwtService;
 import com.ey.springboot3security.service.UserInfoService;
@@ -38,6 +39,16 @@ public class UserController {
     @GetMapping("/users")
     public List<UserInfo> getAllUsers() {
         return service.getAllUsers();
+    }
+
+    @PutMapping("/users/{username}")
+    public String updateEmployee(@PathVariable String username, @RequestBody EmpleadoUpdateRequest request) {
+        return service.updateEmployee(username, request);
+    }
+
+    @DeleteMapping("/users/{username}")
+    public void deleteEmployee(@PathVariable String username) {
+        service.deleteEmployee(username);
     }
 
     // Removed the role checks here as they are already managed in SecurityConfig

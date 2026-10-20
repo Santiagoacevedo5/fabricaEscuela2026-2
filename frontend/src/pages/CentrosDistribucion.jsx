@@ -40,8 +40,6 @@ const enviarPut = async (url, body, mensajeOk) => {
     return mensaje === mensajeOk ? null : mensaje
 }
 
-const btnAccion = 'px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors'
-
 export default function CentrosDistribucion({ puedeEditar }) {
     const [centros, setCentros] = useState([])
     const [encargados, setEncargados] = useState([])
@@ -56,6 +54,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
     const [centroInventario, setCentroInventario] = useState(null)
     const [modalEditarAbierto, setModalEditarAbierto] = useState(false)
+    const [confirmacionEstadoAbierta, setConfirmacionEstadoAbierta] = useState(false)
     const [centroEditando, setCentroEditando] = useState(null)
     const [formEdicion, setFormEdicion] = useState(FORM_EDICION_INICIAL)
 
@@ -101,6 +100,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
     const abrirModalEditar = centro => {
         setCentroEditando(centro)
+        setConfirmacionEstadoAbierta(false)
         setFormEdicion({
             id: centro.id,
             nombre: centro.nombre || '',
@@ -113,7 +113,10 @@ export default function CentrosDistribucion({ puedeEditar }) {
         setModalEditarAbierto(true)
     }
 
-    const cerrarModalEditar = () => setModalEditarAbierto(false)
+    const cerrarModalEditar = () => {
+        setConfirmacionEstadoAbierta(false)
+        setModalEditarAbierto(false)
+    }
 
     const activoActual = estaActivo(centroEditando)
     // Estado en el que quedará el centro si se confirma el formulario
@@ -129,13 +132,13 @@ export default function CentrosDistribucion({ puedeEditar }) {
     ]
 
     const cambiarCheckboxEstado = e => {
-        const marcado = e.target.checked
+        const nuevoEstado = e.target.checked
         const encargadoOriginal = centroEditando?.encargado ? String(centroEditando.encargado.id) : ''
         setFormEdicion(prev => ({
             ...prev,
-            cambiarEstado: marcado,
+            cambiarEstado: nuevoEstado !== activoActual,
             // un centro inactivo no puede tener encargado: al desactivar se quita, y al desmarcar se restaura
-            encargadoId: activoActual ? (marcado ? '' : encargadoOriginal) : prev.encargadoId,
+            encargadoId: activoActual ? (nuevoEstado ? encargadoOriginal : '') : prev.encargadoId,
         }))
     }
 
@@ -152,12 +155,17 @@ export default function CentrosDistribucion({ puedeEditar }) {
     const guardarEdicion = async () => {
         if (!validarEdicion()) return
 
+        if (formEdicion.cambiarEstado) {
+            setConfirmacionEstadoAbierta(true)
+            return
+        }
+
+        await ejecutarEdicion()
+    }
+
+    const ejecutarEdicion = async () => {
         const activando = formEdicion.cambiarEstado && !activoActual
         const desactivando = formEdicion.cambiarEstado && activoActual
-
-        // Confirmación antes de cambiar el estado (escenario 3)
-        if (formEdicion.cambiarEstado &&
-            !window.confirm(`¿Seguro que deseas ${activando ? 'activar' : 'desactivar'} este centro de distribución?`)) return
 
         setErrorServidor('')
         setEnviando(true)
@@ -295,8 +303,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 </div>
                 <button
                     onClick={abrirModal}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: '#1e3a5f' }}
+                    className="data-table-primary-button"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -332,9 +339,9 @@ export default function CentrosDistribucion({ puedeEditar }) {
             </div>
 
             {/* Tabla */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+            <div className="data-table-card">
+                <div className="data-table-scroll">
+                    <table className="data-table">
                         <thead>
                         <tr style={{ backgroundColor: '#f8fafc' }}>
                             {['Nombre', 'Ubicación', 'Encargado', 'Fecha de registro', 'Estado', 'Acciones'].map(h => (
@@ -380,12 +387,30 @@ export default function CentrosDistribucion({ puedeEditar }) {
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <div className="flex gap-2">
-                                            <button onClick={() => setCentroInventario(c)} className={btnAccion}>
-                                                Ver inventario
+                                            <button
+                                                type="button"
+                                                onClick={() => setCentroInventario(c)}
+                                                aria-label={`Ver inventario de ${c.nombre}`}
+                                                title="Ver inventario"
+                                                className="data-table-action"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 12s3.5-7 9.75-7 9.75 7 9.75 7-3.5 7-9.75 7-9.75-7-9.75-7Z" />
+                                                    <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                                </svg>
                                             </button>
                                             {puedeEditar && (
-                                                <button onClick={() => abrirModalEditar(c)} className={btnAccion}>
-                                                    Editar
+                                                <button
+                                                    type="button"
+                                                    onClick={() => abrirModalEditar(c)}
+                                                    aria-label={`Editar ${c.nombre}`}
+                                                    title="Editar"
+                                                    className="data-table-action"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                                                    </svg>
                                                 </button>
                                             )}
                                         </div>
@@ -446,7 +471,41 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
             {/* Modal Editar CD (HU3.6) */}
             {modalEditarAbierto && (
-                <Modal title="Editar centro de distribución" onClose={cerrarModalEditar} size="md">
+                <Modal
+                    title={confirmacionEstadoAbierta ? 'Confirmar cambio de estado' : 'Editar centro de distribución'}
+                    onClose={cerrarModalEditar}
+                    size="md"
+                >
+                    {confirmacionEstadoAbierta ? (
+                        <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                                ¿Seguro que deseas {quedaActivo ? 'activar' : 'desactivar'} este centro de distribución?
+                            </p>
+                            <p className="mt-1 mb-6 text-sm text-slate-500">{formEdicion.nombre}</p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmacionEstadoAbierta(false)}
+                                    className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                >
+                                    Volver
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setConfirmacionEstadoAbierta(false)
+                                        ejecutarEdicion()
+                                    }}
+                                    disabled={enviando}
+                                    className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60"
+                                    style={{ backgroundColor: quedaActivo ? '#15803d' : '#dc2626' }}
+                                >
+                                    Sí, {quedaActivo ? 'activar' : 'desactivar'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                    <>
                     <div className="space-y-4">
                         <Field label="Nombre del CD *" error={errores.nombre}>
                             <input type="text" value={formEdicion.nombre} onChange={fe('nombre')} className={inputCls(!!errores.nombre)} />
@@ -477,16 +536,12 @@ export default function CentrosDistribucion({ puedeEditar }) {
                             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    checked={formEdicion.cambiarEstado}
+                                    checked={quedaActivo}
                                     onChange={cambiarCheckboxEstado}
                                     className="w-4 h-4 rounded border-slate-300"
                                 />
                                 Activar/desactivar
                             </label>
-                            <p className="text-xs text-slate-500 mt-1">
-                                Estado actual: {activoActual ? 'Activo' : 'Inactivo'}.
-                                {formEdicion.cambiarEstado && ` Al confirmar quedará ${quedaActivo ? 'activo' : 'inactivo'}.`}
-                            </p>
                         </div>
                     </div>
                     {errorServidor && (
@@ -507,6 +562,8 @@ export default function CentrosDistribucion({ puedeEditar }) {
                             {enviando ? 'Guardando...' : 'Confirmar'}
                         </button>
                     </div>
+                    </>
+                    )}
                 </Modal>
             )}
         </div>

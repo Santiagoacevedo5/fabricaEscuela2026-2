@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/welcome", "/auth/addNewUser", "/auth/generateToken").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/auth/users/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/auth/users/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/tiendas", "/api/tiendas/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/centros/**").hasAuthority("ROLE_ADMIN")
