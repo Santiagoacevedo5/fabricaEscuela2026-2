@@ -1,5 +1,6 @@
 package com.ey.springboot3security.controller;
 
+import com.ey.springboot3security.dto.DespachoRequest;
 import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Inventario;
 import com.ey.springboot3security.entity.Producto;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @RestController
@@ -143,5 +145,84 @@ public class InventarioController {
     @GetMapping("/movimientos")
     public List<MovimientoInventario> listarMovimientos() {
         return movimientoRepository.findAll();
+    }
+
+    // Despacho: mueve unidades del inventario de un CD al de una de sus tiendas.
+    // Primero se valida todo y solo al final se modifica el stock, porque un return de error
+    // no deshace lo que ya se haya guardado (solo una excepción hace rollback).
+    @PostMapping("/despachos")
+    @Transactional
+    public ResponseEntity<?> registrarDespacho(@RequestBody DespachoRequest req) {
+        // 1. Datos obligatorios
+        if (req.getInventarioId() == null || req.getTiendaId() == null) {
+            return ResponseEntity.badRequest().body("Error: Debe indicar el inventario del CD y la tienda destino.");
+        }
+        if (req.getCantidad() == null || req.getCantidad() <= 0) {
+            return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
+        }
+
+        // 2. El origen debe ser inventario de un CD
+        Inventario origen = inventarioRepository.findById(req.getInventarioId()).orElse(null);
+        if (origen == null) {
+            return ResponseEntity.status(404).body("Error: El inventario no existe.");
+        }
+        if (origen.getCentroDistribucion() == null) {
+            return ResponseEntity.badRequest().body("Error: Solo se puede despachar desde el inventario de un centro de distribución.");
+        }
+
+        // 3. La tienda debe existir, estar activa y pertenecer a ese CD
+        Tienda tienda = tiendaRepository.findById(req.getTiendaId()).orElse(null);
+        if (tienda == null) {
+            return ResponseEntity.status(404).body("Error: La tienda no existe.");
+        }
+        if (Boolean.FALSE.equals(tienda.getActiva())) {
+            return ResponseEntity.badRequest().body("Error: La tienda está inactiva.");
+        }
+        Integer cdOrigenId = origen.getCentroDistribucion().getId();
+        if (tienda.getCentroDistribucion() == null || !cdOrigenId.equals(tienda.getCentroDistribucion().getId())) {
+            return ResponseEntity.badRequest().body("Error: La tienda no pertenece a este centro de distribución.");
+        }
+
+        // 4. Stock suficiente en el CD
+        if (origen.getCantidad() < req.getCantidad()) {
+            return ResponseEntity.status(409).body("Error: Stock insuficiente en el CD. Disponible: " + origen.getCantidad());
+        }
+
+        // 5. Fila del producto en la tienda (si nunca lo ha tenido, se crea en 0)
+        Inventario destino = inventarioRepository
+                .findByProductoIdProductoAndTiendaId(origen.getProducto().getIdProducto(), tienda.getId())
+                .orElseGet(() -> {
+                    Inventario nuevo = new Inventario();
+                    nuevo.setTienda(tienda);
+                    nuevo.setProducto(origen.getProducto());
+                    nuevo.setCantidad(0);
+                    return nuevo;
+                });
+        int cantidadDestino = destino.getCantidad() == null ? 0 : destino.getCantidad();
+        if ((long) cantidadDestino + req.getCantidad() > Integer.MAX_VALUE) {
+            return ResponseEntity.status(409).body("Error: La cantidad excede el máximo permitido en la tienda.");
+        }
+
+        // 6. Todo validado: ahora sí se mueve el stock
+        origen.setCantidad(origen.getCantidad() - req.getCantidad());
+        inventarioRepository.save(origen);
+        destino.setCantidad(cantidadDestino + req.getCantidad());
+        destino = inventarioRepository.save(destino);
+
+        // 7. Trazabilidad: salida en el CD y entrada en la tienda
+        MovimientoInventario salida = new MovimientoInventario();
+        salida.setInventario(origen);
+        salida.setTipo("SALIDA");
+        salida.setCantidad(req.getCantidad());
+
+        MovimientoInventario entrada = new MovimientoInventario();
+        entrada.setInventario(destino);
+        entrada.setTipo("ENTRADA");
+        entrada.setCantidad(req.getCantidad());
+
+        return ResponseEntity.status(201).body(Map.of(
+                "salida", movimientoRepository.save(salida),
+                "entrada", movimientoRepository.save(entrada)
+        ));
     }
 }
