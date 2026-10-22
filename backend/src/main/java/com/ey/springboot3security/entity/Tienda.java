@@ -38,5 +38,7 @@ public class Tienda {
     private CentroDistribucion centroDistribucion;
 
     // Nuevo campo para HU3.5 (por defecto activa)
+    private Integer capacidadMinima;
+    private Integer capacidadMaxima;
     private Boolean activa = true;
 }

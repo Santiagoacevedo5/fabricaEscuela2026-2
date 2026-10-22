@@ -1,5 +1,6 @@
 package com.ey.springboot3security.controller;
 
+import com.ey.springboot3security.dto.CapacidadRequest;
 import com.ey.springboot3security.dto.DespachoRequest;
 import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Inventario;
@@ -223,6 +224,70 @@ public class InventarioController {
         return ResponseEntity.status(201).body(Map.of(
                 "salida", movimientoRepository.save(salida),
                 "entrada", movimientoRepository.save(entrada)
+        ));
+    }
+
+    // Crear inventario de una ubicación: define su capacidad total (suma de todos los productos).
+    // Los productos se agregan después con "Registrar entrada" (CD) o por despacho (tienda).
+    @PostMapping("/capacidad")
+    public ResponseEntity<?> crearInventarioUbicacion(@RequestBody CapacidadRequest req) {
+        Integer min = req.getCapacidadMinima();
+        Integer max = req.getCapacidadMaxima();
+
+        // 1. Datos obligatorios y coherentes
+        if (req.getUbicacionId() == null) {
+            return ResponseEntity.badRequest().body("Error: Debe seleccionar la ubicación.");
+        }
+        if (min == null || max == null) {
+            return ResponseEntity.badRequest().body("Error: La capacidad mínima y la máxima son obligatorias.");
+        }
+        if (min < 0) {
+            return ResponseEntity.badRequest().body("Error: La capacidad mínima no puede ser negativa.");
+        }
+        if (max <= min) {
+            return ResponseEntity.badRequest().body("Error: La capacidad máxima debe ser mayor que la mínima.");
+        }
+
+        // 2. Según el tipo, la ubicación debe existir, no tener inventario creado
+        //    y el máximo no puede quedar por debajo de lo que ya tiene
+        if ("CD".equals(req.getTipo())) {
+            CentroDistribucion cd = centroRepository.findById(req.getUbicacionId()).orElse(null);
+            if (cd == null) {
+                return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
+            }
+            if (cd.getCapacidadMaxima() != null) {
+                return ResponseEntity.status(409).body("Error: Este centro de distribución ya tiene inventario creado.");
+            }
+            long total = inventarioRepository.totalEnCentro(cd.getId());
+            if (max < total) {
+                return ResponseEntity.status(409).body("Error: La capacidad máxima no puede ser menor a las unidades que ya tiene (" + total + ").");
+            }
+            cd.setCapacidadMinima(min);
+            cd.setCapacidadMaxima(max);
+            centroRepository.save(cd);
+        } else if ("TIENDA".equals(req.getTipo())) {
+            Tienda tienda = tiendaRepository.findById(req.getUbicacionId()).orElse(null);
+            if (tienda == null) {
+                return ResponseEntity.status(404).body("Error: La tienda no existe.");
+            }
+            if (tienda.getCapacidadMaxima() != null) {
+                return ResponseEntity.status(409).body("Error: Esta tienda ya tiene inventario creado.");
+            }
+            long total = inventarioRepository.totalEnTienda(tienda.getId());
+            if (max < total) {
+                return ResponseEntity.status(409).body("Error: La capacidad máxima no puede ser menor a las unidades que ya tiene (" + total + ").");
+            }
+            tienda.setCapacidadMinima(min);
+            tienda.setCapacidadMaxima(max);
+            tiendaRepository.save(tienda);
+        } else {
+            return ResponseEntity.badRequest().body("Error: El tipo debe ser CD o TIENDA.");
+        }
+
+        return ResponseEntity.status(201).body(Map.of(
+                "mensaje", "Inventario creado exitosamente.",
+                "capacidadMinima", min,
+                "capacidadMaxima", max
         ));
     }
 }
