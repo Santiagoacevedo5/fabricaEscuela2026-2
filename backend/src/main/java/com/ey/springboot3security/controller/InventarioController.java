@@ -2,6 +2,7 @@ package com.ey.springboot3security.controller;
 
 import com.ey.springboot3security.dto.CapacidadRequest;
 import com.ey.springboot3security.dto.DespachoRequest;
+import com.ey.springboot3security.dto.EntradaRequest;
 import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Inventario;
 import com.ey.springboot3security.entity.Producto;
@@ -289,5 +290,63 @@ public class InventarioController {
                 "capacidadMinima", min,
                 "capacidadMaxima", max
         ));
+    }
+
+    // Registrar entrada: ingresa unidades de cualquier producto del catálogo a un CD,
+    // respetando la capacidad máxima del CD (suma de todos sus productos).
+    @PostMapping("/entradas")
+    @Transactional
+    public ResponseEntity<?> registrarEntrada(@RequestBody EntradaRequest req) {
+        // 1. Datos obligatorios
+        if (req.getCentroId() == null || req.getProductoId() == null) {
+            return ResponseEntity.badRequest().body("Error: Debe seleccionar el centro de distribución y el producto.");
+        }
+        if (req.getCantidad() == null || req.getCantidad() <= 0) {
+            return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
+        }
+
+        // 2. El CD debe existir y tener su inventario creado
+        CentroDistribucion cd = centroRepository.findById(req.getCentroId()).orElse(null);
+        if (cd == null) {
+            return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
+        }
+        if (cd.getCapacidadMaxima() == null) {
+            return ResponseEntity.status(409).body("Error: Este centro de distribución no tiene inventario creado. Primero use \"Crear inventario\".");
+        }
+
+        // 3. El producto debe existir
+        Producto producto = productoRepository.findById(req.getProductoId()).orElse(null);
+        if (producto == null) {
+            return ResponseEntity.status(404).body("Error: El producto no existe.");
+        }
+
+        // 4. La entrada no puede pasar la capacidad máxima del CD
+        long total = inventarioRepository.totalEnCentro(cd.getId());
+        if (total + req.getCantidad() > cd.getCapacidadMaxima()) {
+            long disponible = Math.max(0, cd.getCapacidadMaxima() - total);
+            return ResponseEntity.status(409).body("Error: La entrada supera la capacidad máxima del CD ("
+                    + cd.getCapacidadMaxima() + "). Actualmente tiene " + total + ", espacio disponible: " + disponible + ".");
+        }
+
+        // 5. Fila del producto en el CD (si nunca lo ha tenido, se crea en 0)
+        Inventario fila = inventarioRepository
+                .findByProductoIdProductoAndCentroDistribucionId(producto.getIdProducto(), cd.getId())
+                .orElseGet(() -> {
+                    Inventario nuevo = new Inventario();
+                    nuevo.setCentroDistribucion(cd);
+                    nuevo.setProducto(producto);
+                    nuevo.setCantidad(0);
+                    return nuevo;
+                });
+        int actual = fila.getCantidad() == null ? 0 : fila.getCantidad();
+        fila.setCantidad(actual + req.getCantidad());
+        fila = inventarioRepository.save(fila);
+
+        // 6. Trazabilidad
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setInventario(fila);
+        movimiento.setTipo("ENTRADA");
+        movimiento.setCantidad(req.getCantidad());
+        return ResponseEntity.status(201).body(movimientoRepository.save(movimiento));
     }
 }
