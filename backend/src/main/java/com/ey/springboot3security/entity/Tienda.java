@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +28,11 @@ public class Tienda {
     @OneToOne
     @JoinColumn(name = "encargado_id")
     private UserInfo encargado;
+
+    // CD que abastece a esta tienda (muchas tiendas -> un CD)
+    @ManyToOne
+    @JoinColumn(name = "centro_distribucion_id")
+    private CentroDistribucion centroDistribucion;
 
     // Nuevo campo para HU3.5 (por defecto activa)
     private Boolean activa = true;
