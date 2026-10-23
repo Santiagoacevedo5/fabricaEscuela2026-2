@@ -28,7 +28,7 @@ public class Tienda {
 
     @OneToOne
     @JoinColumn(name = "encargado_id")
-    @JsonIgnoreProperties({"password", "confirmarPassword"})
+    @JsonIgnoreProperties({"password", "confirmarPassword", "email", "documento"})
     private UserInfo encargado;
 
     // CD que abastece a esta tienda (muchas tiendas -> un CD)

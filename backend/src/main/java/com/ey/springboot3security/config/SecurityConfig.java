@@ -72,13 +72,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/inventario/entradas", "/api/inventario/despachos")
                         .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
                         .requestMatchers("/api/inventario/ventas").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_TIENDA")
-                        .requestMatchers(HttpMethod.POST, "/api/inventario").hasAuthority("ROLE_ADMIN")
+                        // CERRADO: agregaba productos sin revisar capacidad; ahora entran por /entradas o por despacho
+                        .requestMatchers(HttpMethod.POST, "/api/inventario").denyAll()
                         .requestMatchers(HttpMethod.GET, "/api/inventario", "/api/inventario/**").authenticated()
 
-                        // Inventario por CD (HU4.3): consultar admin y encargado de CD; agregar solo admin
-                        // (agrega productos sin revisar la capacidad del CD)
+                        // Inventario por CD (HU4.3): solo consulta para admin y encargado de CD
                         .requestMatchers(HttpMethod.GET, "/api/inventario-cd/**").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
-                        .requestMatchers("/api/inventario-cd/**").hasAuthority("ROLE_ADMIN")
+                        // CERRADO: agregaba productos al CD sin revisar capacidad; ahora entran por /entradas
+                        .requestMatchers("/api/inventario-cd/**").denyAll()
 
                         // ---------- Plantilla original ----------
                         .requestMatchers("/auth/user/**").hasAuthority("ROLE_USER")
