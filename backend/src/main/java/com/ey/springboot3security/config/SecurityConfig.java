@@ -38,24 +38,54 @@ public class SecurityConfig {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // HUS-02: la autorización se valida en el servidor en cada petición.
+    // Las reglas se revisan de arriba hacia abajo y se aplica la primera que coincida,
+    // por eso las más específicas van primero.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/welcome", "/auth/addNewUser", "/auth/generateToken").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/auth/users/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/auth/users/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/error").permitAll()
-                        .requestMatchers("/api/tiendas", "/api/tiendas/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/centros/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/centros", "/api/centros/**").permitAll()
-                        .requestMatchers("/api/resumen", "/api/resumen/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/inventario/ventas")
-                        .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_TIENDA")
+                        // ---------- Públicas ----------
+                        .requestMatchers("/auth/welcome", "/auth/generateToken", "/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/resumen", "/api/resumen/**").permitAll() // pantalla de login
+
+                        // ---------- Empleados: solo admin ----------
+                        .requestMatchers("/auth/addNewUser").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/auth/users", "/auth/users/**").hasAuthority("ROLE_ADMIN")
+
+                        // ---------- Tiendas y CD: consultar todos, registrar/editar admin ----------
+                        .requestMatchers("/api/tiendas/encargados-disponibles", "/api/centros/encargados-disponibles")
+                        .hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/tiendas", "/api/tiendas/**", "/api/centros", "/api/centros/**")
+                        .authenticated()
+                        .requestMatchers("/api/tiendas", "/api/tiendas/**", "/api/centros", "/api/centros/**")
+                        .hasAuthority("ROLE_ADMIN")
+
+                        // ---------- Productos: consultar todos, registrar/editar admin y encargado de CD ----------
+                        .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/**").authenticated()
+                        .requestMatchers("/api/productos", "/api/productos/**").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
+
+                        // ---------- Inventario ----------
+                        .requestMatchers("/api/inventario/capacidad").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/inventario/entradas", "/api/inventario/despachos")
+                        .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
+                        .requestMatchers("/api/inventario/ventas").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_TIENDA")
+                        // CERRADO: agregaba productos sin revisar capacidad; ahora entran por /entradas o por despacho
+                        .requestMatchers(HttpMethod.POST, "/api/inventario").denyAll()
+                        .requestMatchers(HttpMethod.GET, "/api/inventario", "/api/inventario/**").authenticated()
+
+                        // Inventario por CD (HU4.3): solo consulta para admin y encargado de CD
+                        .requestMatchers(HttpMethod.GET, "/api/inventario-cd/**").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
+                        // CERRADO: agregaba productos al CD sin revisar capacidad; ahora entran por /entradas
+                        .requestMatchers("/api/inventario-cd/**").denyAll()
+
+                        // ---------- Plantilla original ----------
                         .requestMatchers("/auth/user/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/auth/admin/**").hasAuthority("ROLE_ADMIN")
+
+                        // Todo lo demás (/auth/me, /auth/logout, ...) exige sesión
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -6,13 +6,10 @@ const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
 })
 
+// Consulta del inventario de una tienda. Los productos ya no se agregan desde aquí:
+// entran a la tienda solo por despacho desde su CD y salen solo por ventas.
 export default function InventarioTienda({ tienda, onVolver }) {
   const [items, setItems] = useState([])
-  const [disponibles, setDisponibles] = useState([])
-  const [modal, setModal] = useState(false)
-  const [productoId, setProductoId] = useState('')
-  const [error, setError] = useState('')
-  const [exito, setExito] = useState('')
   const [cargando, setCargando] = useState(true)
 
   const cargarInventario = async () => {
@@ -29,153 +26,63 @@ export default function InventarioTienda({ tienda, onVolver }) {
     }
   }
 
-  // Productos activos del catálogo que la tienda aún no tiene
-  const cargarDisponibles = async () => {
-    try {
-      const r = await fetch(`${API}/api/productos`, { headers: headers() })
-      if (r.ok) {
-        const productos = await r.json()
-        const yaEnTienda = new Set(items.map((i) => i.producto?.idProducto))
-        setDisponibles(productos.filter((p) => p.activo !== false && !yaEnTienda.has(p.idProducto)))
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
   useEffect(() => {
     cargarInventario()
   }, [tienda.id])
 
-  const abrirModal = () => {
-    setProductoId('')
-    setError('')
-    cargarDisponibles()
-    setModal(true)
-  }
-
-  const agregar = async () => {
-    if (!productoId) {
-      setError('Selecciona un producto.')
-      return
-    }
-    try {
-      const r = await fetch(`${API}/api/inventario`, {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({
-          tienda: { id: tienda.id },
-          producto: { idProducto: Number(productoId) },
-          cantidad: 0,
-        }),
-      })
-      if (r.status === 201) {
-        setModal(false)
-        setExito('Producto agregado al inventario exitosamente.')
-        setTimeout(() => setExito(''), 4000)
-        cargarInventario()
-      } else {
-        setError((await r.text()) || 'No se pudo agregar el producto.')
-      }
-    } catch (e) {
-      setError('No se pudo conectar con el servidor.')
-    }
-  }
-
   return (
-    <div className="mx-auto w-full max-w-7xl p-6 md:p-8">
-      <button onClick={onVolver} className="text-sm text-slate-600 hover:text-slate-900 mb-3">
-        ← Volver a Tiendas
-      </button>
-
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-slate-900">Inventario - {tienda.nombre}</h1>
-        <button
-          onClick={abrirModal}
-          disabled={tienda.activa === false}
-          title={tienda.activa === false ? 'La tienda está inactiva' : ''}
-          className="data-table-primary-button"
-        >
-          + Agregar Producto
+      <div className="mx-auto w-full max-w-7xl p-6 md:p-8">
+        <button onClick={onVolver} className="text-sm text-slate-600 hover:text-slate-900 mb-3">
+          ← Volver a Tiendas
         </button>
-      </div>
 
-      {exito && (
-        <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-green-50 border border-green-200 text-green-800">
-          {exito}
+        <div className="mb-4">
+          <h1 className="text-xl font-semibold text-slate-900">Inventario - {tienda.nombre}</h1>
         </div>
-      )}
 
-      <div className="data-table-card">
-        <div className="data-table-scroll">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre del producto</th>
-              <th>Unidades disponibles</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((i) => (
-              <tr key={i.id}>
-                <td>{i.producto?.identificador ?? i.producto?.idProducto}</td>
-                <td>{i.producto?.nombre}</td>
-                <td>
-                  {i.cantidad === 0 ? (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+        {tienda.activa === false && (
+            <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-amber-50 border border-amber-200 text-amber-800">
+              Esta tienda está inactiva.
+            </div>
+        )}
+
+        <div className="data-table-card">
+          <div className="data-table-scroll">
+            <table className="data-table">
+              <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre del producto</th>
+                <th>Unidades disponibles</th>
+              </tr>
+              </thead>
+              <tbody>
+              {items.map((i) => (
+                  <tr key={i.id}>
+                    <td>{i.producto?.identificador ?? i.producto?.idProducto}</td>
+                    <td>{i.producto?.nombre}</td>
+                    <td>
+                      {i.cantidad === 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
                       Sin existencias
                     </span>
-                  ) : (
-                    i.cantidad
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!cargando && items.length === 0 && (
-              <tr>
-                <td colSpan={3}>
-                  Esta tienda aún no tiene productos en su inventario.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
-
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Agregar producto al inventario</h2>
-            <label className="block text-sm text-slate-600 mb-1">Producto</label>
-            <select
-              value={productoId}
-              onChange={(e) => setProductoId(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="">Selecciona un producto</option>
-              {disponibles.map((p) => (
-                <option key={p.idProducto} value={p.idProducto}>
-                  {p.identificador} - {p.nombre}
-                </option>
+                      ) : (
+                          i.cantidad
+                      )}
+                    </td>
+                  </tr>
               ))}
-            </select>
-            {disponibles.length === 0 && (
-              <p className="text-xs text-slate-400 mt-2">No hay productos disponibles para agregar.</p>
-            )}
-            {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setModal(false)} className="px-4 py-2 text-sm rounded-lg border border-slate-300">
-                Cancelar
-              </button>
-              <button onClick={agregar} className="px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-700">
-                Agregar
-              </button>
-            </div>
+              {!cargando && items.length === 0 && (
+                  <tr>
+                    <td colSpan={3}>
+                      Esta tienda aún no tiene productos en su inventario.
+                    </td>
+                  </tr>
+              )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
-    </div>
+      </div>
   )
 }

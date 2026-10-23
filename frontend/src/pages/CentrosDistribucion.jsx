@@ -22,7 +22,7 @@ const MENSAJE_ESTADO = 'El estado del centro ha sido actualizado con éxito'
 // Solo "ACTIVO" cuenta como activo: un estado nulo o desconocido se trata como inactivo
 const estaActivo = c => c?.estado === 'ACTIVO'
 
-// Los PUT de centros exigen sesión de administrador (el token viaja en el header)
+// Todas las rutas de centros exigen sesión (el token viaja en el header)
 const headersAuth = () => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -40,6 +40,8 @@ const enviarPut = async (url, body, mensajeOk) => {
     return mensaje === mensajeOk ? null : mensaje
 }
 
+// HUS-02: puedeEditar = solo admin (registrar, editar y agregar productos al CD).
+// Los encargados de CD solo consultan.
 export default function CentrosDistribucion({ puedeEditar }) {
     const [centros, setCentros] = useState([])
     const [encargados, setEncargados] = useState([])
@@ -60,12 +62,13 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
     useEffect(() => {
         cargarCentros()
-        cargarEncargados()
-    }, [])
+        // Los encargados disponibles solo se usan en los formularios (solo admin)
+        if (puedeEditar) cargarEncargados()
+    }, [puedeEditar])
 
     const cargarCentros = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`)
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`, { headers: headersAuth() })
             if (res.ok) {
                 const data = await res.json()
                 setCentros(data)
@@ -77,7 +80,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
     const cargarEncargados = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros/encargados-disponibles`)
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros/encargados-disponibles`, { headers: headersAuth() })
             if (res.ok) {
                 const data = await res.json()
                 setEncargados(data)
@@ -246,7 +249,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headersAuth(),
                 body: JSON.stringify(body),
             })
 
@@ -285,6 +288,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
         return (
             <InventarioCD
                 centro={centroInventario}
+                puedeAgregar={puedeEditar}
                 onVolver={() => {
                     setCentroInventario(null)
                     cargarCentros()
@@ -299,17 +303,21 @@ export default function CentrosDistribucion({ puedeEditar }) {
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-xl font-bold text-slate-900">Centros de Distribución</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Gestión de centros de distribución (CD)</p>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        {puedeEditar ? 'Gestión de centros de distribución (CD)' : 'Consulta de centros de distribución (CD)'}
+                    </p>
                 </div>
-                <button
-                    onClick={abrirModal}
-                    className="data-table-primary-button"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Registrar CD
-                </button>
+                {puedeEditar && (
+                    <button
+                        onClick={abrirModal}
+                        className="data-table-primary-button"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Registrar CD
+                    </button>
+                )}
             </div>
 
             {/* Notificación de éxito */}
@@ -426,8 +434,8 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 </div>
             </div>
 
-            {/* Modal Registrar CD */}
-            {modalAbierto && (
+            {/* Modal Registrar CD (solo admin) */}
+            {puedeEditar && modalAbierto && (
                 <Modal title="Registrar centro de distribución" onClose={cerrarModal} size="md">
                     <div className="space-y-4">
                         <Field label="Nombre del CD *" error={errores.nombre}>
@@ -469,8 +477,8 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 </Modal>
             )}
 
-            {/* Modal Editar CD (HU3.6) */}
-            {modalEditarAbierto && (
+            {/* Modal Editar CD (HU3.6, solo admin) */}
+            {puedeEditar && modalEditarAbierto && (
                 <Modal
                     title={confirmacionEstadoAbierta ? 'Confirmar cambio de estado' : 'Editar centro de distribución'}
                     onClose={cerrarModalEditar}
@@ -505,64 +513,64 @@ export default function CentrosDistribucion({ puedeEditar }) {
                             </div>
                         </div>
                     ) : (
-                    <>
-                    <div className="space-y-4">
-                        <Field label="Nombre del CD *" error={errores.nombre}>
-                            <input type="text" value={formEdicion.nombre} onChange={fe('nombre')} className={inputCls(!!errores.nombre)} />
-                        </Field>
-                        <Field label="Ubicación *" error={errores.ubicacion}>
-                            <input type="text" value={formEdicion.ubicacion} onChange={fe('ubicacion')} className={inputCls(!!errores.ubicacion)} />
-                        </Field>
-                        <Field label="Encargado asignado">
-                            <select
-                                value={formEdicion.encargadoId}
-                                onChange={fe('encargadoId')}
-                                disabled={!quedaActivo}
-                                className={`${inputCls(false)} disabled:bg-slate-100 disabled:text-slate-400`}
-                            >
-                                <option value="">Sin asignar</option>
-                                {opcionesEncargado.map(enc => (
-                                    <option key={enc.id} value={enc.id}>{enc.nombre}</option>
-                                ))}
-                            </select>
-                            {!quedaActivo && (
-                                <p className="text-xs text-amber-600 mt-1">Un centro inactivo no puede tener encargado asignado.</p>
+                        <>
+                            <div className="space-y-4">
+                                <Field label="Nombre del CD *" error={errores.nombre}>
+                                    <input type="text" value={formEdicion.nombre} onChange={fe('nombre')} className={inputCls(!!errores.nombre)} />
+                                </Field>
+                                <Field label="Ubicación *" error={errores.ubicacion}>
+                                    <input type="text" value={formEdicion.ubicacion} onChange={fe('ubicacion')} className={inputCls(!!errores.ubicacion)} />
+                                </Field>
+                                <Field label="Encargado asignado">
+                                    <select
+                                        value={formEdicion.encargadoId}
+                                        onChange={fe('encargadoId')}
+                                        disabled={!quedaActivo}
+                                        className={`${inputCls(false)} disabled:bg-slate-100 disabled:text-slate-400`}
+                                    >
+                                        <option value="">Sin asignar</option>
+                                        {opcionesEncargado.map(enc => (
+                                            <option key={enc.id} value={enc.id}>{enc.nombre}</option>
+                                        ))}
+                                    </select>
+                                    {!quedaActivo && (
+                                        <p className="text-xs text-amber-600 mt-1">Un centro inactivo no puede tener encargado asignado.</p>
+                                    )}
+                                    {quedaActivo && opcionesEncargado.length === 0 && (
+                                        <p className="text-xs text-amber-600 mt-1">No hay encargados de CD disponibles.</p>
+                                    )}
+                                </Field>
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={quedaActivo}
+                                            onChange={cambiarCheckboxEstado}
+                                            className="w-4 h-4 rounded border-slate-300"
+                                        />
+                                        Activar/desactivar
+                                    </label>
+                                </div>
+                            </div>
+                            {errorServidor && (
+                                <div className="mt-4 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+                                    {errorServidor}
+                                </div>
                             )}
-                            {quedaActivo && opcionesEncargado.length === 0 && (
-                                <p className="text-xs text-amber-600 mt-1">No hay encargados de CD disponibles.</p>
-                            )}
-                        </Field>
-                        <div>
-                            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={quedaActivo}
-                                    onChange={cambiarCheckboxEstado}
-                                    className="w-4 h-4 rounded border-slate-300"
-                                />
-                                Activar/desactivar
-                            </label>
-                        </div>
-                    </div>
-                    {errorServidor && (
-                        <div className="mt-4 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
-                            {errorServidor}
-                        </div>
-                    )}
-                    <div className="flex justify-end gap-3 mt-6">
-                        <button onClick={cerrarModalEditar} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={guardarEdicion}
-                            disabled={enviando}
-                            className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60"
-                            style={{ backgroundColor: '#1e3a5f' }}
-                        >
-                            {enviando ? 'Guardando...' : 'Confirmar'}
-                        </button>
-                    </div>
-                    </>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button onClick={cerrarModalEditar} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={guardarEdicion}
+                                    disabled={enviando}
+                                    className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60"
+                                    style={{ backgroundColor: '#1e3a5f' }}
+                                >
+                                    {enviando ? 'Guardando...' : 'Confirmar'}
+                                </button>
+                            </div>
+                        </>
                     )}
                 </Modal>
             )}

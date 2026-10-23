@@ -31,4 +31,6 @@ public class CentroDistribucion {
     private UserInfo encargado;
 
     private LocalDate fechaRegistro;
+    private Integer capacidadMinima;
+    private Integer capacidadMaxima;
 }

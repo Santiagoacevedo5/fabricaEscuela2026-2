@@ -81,7 +81,10 @@ export default function Empleados({ empleados, onChange, puedeEditar = false }) 
         try {
             const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/addNewUser`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                },
                 body: JSON.stringify({
                     name: form.nombre.trim(),
                     email: form.correo.trim(),

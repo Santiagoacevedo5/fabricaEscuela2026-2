@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.ey.springboot3security.dto.EncargadoDto;
+import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Tienda;
 import com.ey.springboot3security.entity.UserInfo;
+import com.ey.springboot3security.repository.CentroDistribucionRepository;
 import com.ey.springboot3security.repository.TiendaRepository;
 import com.ey.springboot3security.repository.UserInfoRepository;
 
@@ -17,10 +19,14 @@ public class TiendaService {
 
     private final TiendaRepository repository;
     private final UserInfoRepository userInfoRepository;
+    private final CentroDistribucionRepository centroRepository;
 
-    public TiendaService(TiendaRepository repository, UserInfoRepository userInfoRepository) {
+    public TiendaService(TiendaRepository repository,
+                         UserInfoRepository userInfoRepository,
+                         CentroDistribucionRepository centroRepository) {
         this.repository = repository;
         this.userInfoRepository = userInfoRepository;
+        this.centroRepository = centroRepository;
     }
 
     public Tienda registrarTienda(Tienda tienda) {
@@ -32,12 +38,23 @@ public class TiendaService {
         if (tienda.getEncargado() != null && tienda.getEncargado().getId() != null) {
             Integer encargadoId = tienda.getEncargado().getId();
             UserInfo encargado = userInfoRepository.findById(encargadoId)
-                .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Encargado no encontrado"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Encargado no encontrado"));
             tienda.setEncargado(encargado);
         } else {
             tienda.setEncargado(null);
         }
+
+        // Toda tienda nueva debe pertenecer a un CD (el frontend envía centroDistribucion: { id })
+        if (tienda.getCentroDistribucion() == null || tienda.getCentroDistribucion().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Debe seleccionar el centro de distribución que abastece la tienda.");
+        }
+        Integer centroId = tienda.getCentroDistribucion().getId();
+        CentroDistribucion centro = centroRepository.findById(centroId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Centro de distribución no encontrado"));
+        tienda.setCentroDistribucion(centro);
 
         return repository.save(tienda);
     }
@@ -53,7 +70,7 @@ public class TiendaService {
     // HU3.5 - Editar Tienda: el nombre y el id no se tocan (no son editables)
     public Tienda actualizarTienda(Integer id, Tienda detalles) {
         Tienda tienda = repository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tienda no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tienda no encontrada"));
 
         if (detalles.getDireccion() == null || detalles.getDireccion().isBlank()
                 || detalles.getRegion() == null || detalles.getRegion().isBlank()) {
@@ -64,7 +81,7 @@ public class TiendaService {
         if (detalles.getEncargado() != null && detalles.getEncargado().getId() != null) {
             Integer encargadoId = detalles.getEncargado().getId();
             encargado = userInfoRepository.findById(encargadoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encargado no encontrado"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encargado no encontrado"));
             if (repository.existsByEncargadoIdAndIdNot(encargadoId, id)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "El encargado ya está asignado a otra tienda.");
             }
