@@ -24,21 +24,44 @@ export default function App() {
     const [view, setView] = useState('empleados')
     const [empleados, setEmpleados] = useState([])
 
+    // HUS-02: permisos del usuario logueado (la protección real está en el backend)
+    const tieneRol = (...roles) => usuario?.roles?.some((rol) => roles.includes(rol)) ?? false
+    const esAdmin = tieneRol('ROLE_ADMIN')
+    const esEncargadoCd = tieneRol('ENCARGADO_CD')
+
+    // Carga el usuario y, solo si es admin, la lista de empleados (/auth/users es solo de admin)
+    const iniciarSesion = (token, username) => {
+        setUsuario({ nombre: username || 'Usuario', roles: [] })
+        cargarUsuario(token)
+            .then((datos) => {
+                setUsuario({ nombre: datos.username, roles: datos.roles })
+                if (datos.roles?.includes('ROLE_ADMIN')) {
+                    cargarEmpleados(token)
+                }
+            })
+            .catch((err) => {
+                console.error('Error al cargar el usuario:', err)
+                setUsuario({ nombre: username || 'Usuario', roles: [] })
+            })
+    }
+
     useEffect(() => {
         const token = localStorage.getItem('token')
         const username = localStorage.getItem('username')
         if (token) {
             setAutenticado(true)
-            setUsuario({ nombre: username || 'Usuario', roles: [] })
-            cargarUsuario(token)
-                .then((datos) => setUsuario({ nombre: datos.username, roles: datos.roles }))
-                .catch((err) => {
-                    console.error('Error al cargar el usuario:', err)
-                    setUsuario({ nombre: username || 'Usuario', roles: [] })
-                })
-            cargarEmpleados(token)
+            iniciarSesion(token, username)
         }
     }, [])
+
+    // Si la vista actual no está permitida para el rol (p. ej. un encargado en Empleados), ir a Inventario
+    useEffect(() => {
+        if (!usuario?.roles?.length) return
+        const permitida =
+            (view !== 'empleados' || esAdmin) &&
+            (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA'))
+        if (!permitida) setView('inventario')
+    }, [usuario, view])
 
     const cargarEmpleados = async (token) => {
         try {
@@ -103,43 +126,35 @@ export default function App() {
 
     if (!autenticado) {
         return <Login onLoginSuccess={(username) => {
-            setUsuario({ nombre: username, roles: [] })
             setAutenticado(true)
-            const token = localStorage.getItem('token')
-            cargarUsuario(token)
-                .then((datos) => setUsuario({ nombre: datos.username, roles: datos.roles }))
-                .catch((err) => {
-                    console.error('Error al cargar el usuario:', err)
-                    setUsuario({ nombre: username, roles: [] })
-                })
-            cargarEmpleados(token)
+            iniciarSesion(localStorage.getItem('token'), username)
         }} />
     }
 
     const renderView = () => {
-        if (view === 'empleados') {
+        if (view === 'empleados' && esAdmin) {
             return <Empleados
                 empleados={empleados}
                 onChange={setEmpleados}
-                puedeEditar={usuario?.roles?.includes('ROLE_ADMIN')}
+                puedeEditar={esAdmin}
             />
         }
         if (view === 'tiendas') {
-            return <Tiendas />
+            return <Tiendas puedeEditar={esAdmin} />
         }
-        if (view === 'centros'){
-            return <CentrosDistribucion puedeEditar={usuario?.roles?.includes('ROLE_ADMIN')} />;
-            }
-        if (view === 'productos'){
-            return <Productos />;
-            }
-
+        if (view === 'centros') {
+            return <CentrosDistribucion puedeEditar={esAdmin} />
+        }
+        if (view === 'productos') {
+            return <Productos puedeEditar={esAdmin || esEncargadoCd} />
+        }
         if (view === 'inventario') {
-            return <Inventario />
+            return <Inventario
+                puedeAdministrar={esAdmin}
+                puedeMoverStock={esAdmin || esEncargadoCd}
+            />
         }
-        if (view === 'ventas' && usuario?.roles?.some((rol) =>
-            ['ROLE_ADMIN', 'ENCARGADO_TIENDA'].includes(rol)
-        )) {
+        if (view === 'ventas' && tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) {
             return <Ventas />
         }
 
