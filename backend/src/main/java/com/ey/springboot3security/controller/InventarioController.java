@@ -24,6 +24,7 @@ import com.ey.springboot3security.repository.MovimientoInventarioRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -482,5 +483,56 @@ public class InventarioController {
                 "capacidadMinima", min,
                 "capacidadMaxima", max
         ));
+    }
+
+    // HUS-02 "Mi inventario": el encargado consulta solo la ubicación que tiene asignada.
+    // El servidor decide qué ubicación es a partir del usuario del token.
+    @GetMapping("/mio")
+    public ResponseEntity<?> miInventario(Authentication auth) {
+        String usuario = auth.getName();
+
+        CentroDistribucion cd = centroRepository.findByEncargado_Username(usuario).orElse(null);
+        if (cd != null) {
+            return ResponseEntity.ok(resumenUbicacion(
+                    "CD", cd.getNombre(), cd.getCapacidadMinima(), cd.getCapacidadMaxima(),
+                    !"INACTIVO".equals(cd.getEstado()),
+                    inventarioRepository.findByCentroDistribucionId(cd.getId())));
+        }
+
+        Tienda tienda = tiendaRepository.findByEncargado_Username(usuario).orElse(null);
+        if (tienda != null) {
+            return ResponseEntity.ok(resumenUbicacion(
+                    "TIENDA", tienda.getNombre(), tienda.getCapacidadMinima(), tienda.getCapacidadMaxima(),
+                    !Boolean.FALSE.equals(tienda.getActiva()),
+                    inventarioRepository.findByTiendaId(tienda.getId())));
+        }
+
+        return ResponseEntity.status(404).body("No tiene un centro de distribución ni una tienda asignada.");
+    }
+
+    // Arma la respuesta de "Mi inventario". Se usa LinkedHashMap porque la capacidad puede
+    // venir vacía (inventario aún no creado) y Map.of no acepta valores null.
+    private Map<String, Object> resumenUbicacion(String tipo, String nombre, Integer minimo, Integer maximo,
+                                                 boolean activa, List<Inventario> filas) {
+        List<Map<String, Object>> productos = filas.stream().map(inv -> {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("identificador", inv.getProducto().getIdentificador());
+            p.put("nombre", inv.getProducto().getNombre());
+            p.put("categoria", inv.getProducto().getCategoria());
+            p.put("cantidad", inv.getCantidad());
+            return p;
+        }).toList();
+
+        int ocupacion = filas.stream().mapToInt(inv -> inv.getCantidad() == null ? 0 : inv.getCantidad()).sum();
+
+        Map<String, Object> resumen = new LinkedHashMap<>();
+        resumen.put("tipo", tipo);
+        resumen.put("nombre", nombre);
+        resumen.put("capacidadMinima", minimo);
+        resumen.put("capacidadMaxima", maximo);
+        resumen.put("ocupacion", ocupacion);
+        resumen.put("activa", activa);
+        resumen.put("productos", productos);
+        return resumen;
     }
 }

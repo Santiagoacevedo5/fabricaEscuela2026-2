@@ -15,6 +15,9 @@ public interface InventarioRepository extends JpaRepository<Inventario, Long> {
 
     List<Inventario> findByCentroDistribucionId(Integer centroId);
 
+    // "Mi inventario": productos de una tienda
+    List<Inventario> findByTiendaId(Integer tiendaId);
+
     // Despacho: fila de inventario de un producto en una tienda (vacía si la tienda nunca lo ha tenido)
     Optional<Inventario> findByProductoIdProductoAndTiendaId(Long idProducto, Integer tiendaId);
 

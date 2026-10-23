@@ -1,6 +1,7 @@
 package com.ey.springboot3security.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,10 +17,13 @@ public interface TiendaRepository extends JpaRepository<Tienda, Integer> {
     boolean existsByEncargadoIdAndIdNot(Integer encargadoId, Integer id);
     boolean existsByEncargado_Id(Integer encargadoId);
 
+    // HUS-02 "Mi inventario": la tienda de la que es encargado el usuario logueado
+    Optional<Tienda> findByEncargado_Username(String username);
+
     // Empleados con rol de encargado de tienda que aún no tienen ninguna tienda asignada
     @Query("SELECT new com.ey.springboot3security.dto.EncargadoDto(u.id, u.name) FROM UserInfo u "
-         + "WHERE u.roles LIKE '%ENCARGADO_TIENDA%' "
-         + "AND (u.estado IS NULL OR u.estado <> 'Inactivo') "
-         + "AND NOT EXISTS (SELECT t FROM Tienda t WHERE t.encargado = u)")
+            + "WHERE u.roles LIKE '%ENCARGADO_TIENDA%' "
+            + "AND (u.estado IS NULL OR u.estado <> 'Inactivo') "
+            + "AND NOT EXISTS (SELECT t FROM Tienda t WHERE t.encargado = u)")
     List<EncargadoDto> findEncargadosDisponibles();
 }
