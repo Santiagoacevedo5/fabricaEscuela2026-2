@@ -5,6 +5,9 @@ import InventarioTienda from './pages/InventarioTienda';
 // /api/tiendas devuelve el encargado como UserInfo (campo "name"); /encargados-disponibles devuelve "nombre"
 const nombreDe = (e) => e.nombre ?? e.name;
 
+// Todas las rutas de tiendas y centros exigen sesión: se envía el token guardado en el login
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
 export default function Tiendas() {
   const [tiendaInventario, setTiendaInventario] = useState(null);
   const [tiendas, setTiendas] = useState([]);
@@ -44,7 +47,7 @@ export default function Tiendas() {
 
   const cargarTiendas = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`, { headers: authHeader() });
       if (res.ok) {
         const data = await res.json();
         setTiendas(data);
@@ -56,7 +59,7 @@ export default function Tiendas() {
 
   const cargarEncargados = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas/encargados-disponibles`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas/encargados-disponibles`, { headers: authHeader() });
       if (res.ok) {
         const data = await res.json();
         setEncargados(data);
@@ -69,7 +72,7 @@ export default function Tiendas() {
   // CD disponibles para asignar a la tienda (toda tienda debe pertenecer a un CD)
   const cargarCentros = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/centros`, { headers: authHeader() });
       if (res.ok) {
         const data = await res.json();
         setCentros(data);
@@ -104,7 +107,7 @@ export default function Tiendas() {
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(bodyPayload)
       });
 
@@ -159,7 +162,7 @@ export default function Tiendas() {
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tiendas/${editFormData.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(bodyPayload)
       });
 
