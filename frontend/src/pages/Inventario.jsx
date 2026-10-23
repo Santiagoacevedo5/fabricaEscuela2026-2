@@ -463,46 +463,48 @@ export default function Inventario({ puedeAdministrar = false, puedeMoverStock =
                         )}
                       </div>
 
-                      {/* Productos de la ubicación */}
-                      <div className="data-table-card">
-                        <div className="data-table-scroll">
-                          <table className="data-table">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                              <th>ID</th>
-                              <th>Producto</th>
-                              <th>Categoría</th>
-                              <th>Cantidad</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {mio.productos.length === 0 ? (
+                      {/* Productos: solo si la ubicación ya tiene inventario creado */}
+                      {mio.capacidadMaxima != null && (
+                          <div className="data-table-card">
+                            <div className="data-table-scroll">
+                              <table className="data-table">
+                                <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                  <td colSpan={4} className="text-center text-sm text-slate-400 py-10">
-                                    Aún no hay productos en esta ubicación.
-                                  </td>
+                                  <th>ID</th>
+                                  <th>Producto</th>
+                                  <th>Categoría</th>
+                                  <th>Cantidad</th>
                                 </tr>
-                            ) : (
-                                mio.productos.map((p) => (
-                                    <tr key={p.identificador} className="border-b border-slate-100 last:border-0">
-                                      <td>{p.identificador}</td>
-                                      <td className="font-medium text-slate-900">{p.nombre}</td>
-                                      <td>{p.categoria}</td>
-                                      <td>
-                                        {p.cantidad}
-                                        {p.cantidad === 0 && (
-                                            <span className="ml-2 text-xs text-red-700 bg-red-50 rounded-full px-2 py-0.5">
-                                    Sin existencias
-                                  </span>
-                                        )}
+                                </thead>
+                                <tbody>
+                                {mio.productos.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={4} className="text-center text-sm text-slate-400 py-10">
+                                        Aún no hay productos en esta ubicación.
                                       </td>
                                     </tr>
-                                ))
-                            )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
+                                ) : (
+                                    mio.productos.map((p) => (
+                                        <tr key={p.identificador} className="border-b border-slate-100 last:border-0">
+                                          <td>{p.identificador}</td>
+                                          <td className="font-medium text-slate-900">{p.nombre}</td>
+                                          <td>{p.categoria}</td>
+                                          <td>
+                                            {p.cantidad}
+                                            {p.cantidad === 0 && (
+                                                <span className="ml-2 text-xs text-red-700 bg-red-50 rounded-full px-2 py-0.5">
+                                      Sin existencias
+                                    </span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                    ))
+                                )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                      )}
                     </>
                 )}
               </>

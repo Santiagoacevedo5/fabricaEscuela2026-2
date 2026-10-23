@@ -155,7 +155,7 @@ export default function App() {
             />
         }
         if (view === 'ventas' && tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) {
-            return <Ventas />
+            return <Ventas esAdmin={esAdmin} />
         }
 
         return (
