@@ -27,13 +27,39 @@ const MENSAJES = {
   editar: 'Inventario actualizado exitosamente.',
 };
 
+// Etiqueta y color de cada tipo de movimiento
+const TIPO_MOV = {
+  ENTRADA: ['Entrada', 'bg-green-50 text-green-700'],
+  SALIDA: ['Salida', 'bg-orange-50 text-orange-700'],
+  VENTA: ['Venta', 'bg-blue-50 text-blue-700'],
+};
+
 // /api/tiendas devuelve el encargado como UserInfo (campo "name")
 const nombreEncargado = (u) => u?.encargado?.name ?? u?.encargado?.nombre ?? 'Sin encargado asignado';
 
 // Un CD está abierto si su estado no es INACTIVO; una tienda, si activa no es false
 const cdAbierto = (c) => c.estado !== 'INACTIVO';
 
-export default function Inventario() {
+// HUS-02:
+//  - puedeAdministrar (admin): crear y editar inventarios; en Gestión ve la tabla de inventarios creados
+//  - puedeMoverStock (admin y encargado de CD): entradas y salidas
+//  - los encargados ven "Mi inventario"; el encargado de CD ve en Gestión los movimientos de su CD
+export default function Inventario({ puedeAdministrar = false, puedeMoverStock = false }) {
+  const verMiInventario = !puedeAdministrar;
+  const verGestion = puedeMoverStock;
+  const verMisMovimientos = verGestion && !puedeAdministrar; // encargado de CD
+
+  const [pestana, setPestana] = useState(verMiInventario ? 'mio' : 'gestion');
+
+  // ----- Mi inventario -----
+  const [mio, setMio] = useState(null);
+  const [errorMio, setErrorMio] = useState('');
+
+  // ----- Movimientos de mi inventario (encargado de CD) -----
+  const [misMovimientos, setMisMovimientos] = useState([]);
+  const [errorMov, setErrorMov] = useState('');
+
+  // ----- Gestión -----
   const [inventarios, setInventarios] = useState([]);
   const [centros, setCentros] = useState([]);
   const [tiendas, setTiendas] = useState([]);
@@ -47,9 +73,46 @@ export default function Inventario() {
   const [guardando, setGuardando] = useState(false);
 
   const token = localStorage.getItem('token');
+  const usuarioActual = localStorage.getItem('username');
   const headers = { Authorization: `Bearer ${token}` };
 
   // ---------- CARGA DE DATOS ----------
+
+  // Mi inventario: el backend decide la ubicación según el usuario del token
+  const cargarMio = async () => {
+    setErrorMio('');
+    try {
+      const res = await fetch(`${API}/api/inventario/mio`, { headers });
+      if (res.ok) {
+        setMio(await res.json());
+      } else if (res.status === 404) {
+        setMio(null);
+        setErrorMio(await res.text());
+      } else {
+        throw new Error();
+      }
+    } catch {
+      setErrorMio('No se pudo cargar tu inventario. Si la sesión venció, cierra sesión y vuelve a entrar.');
+    }
+  };
+
+  // Movimientos del CD del encargado: también los filtra el backend
+  const cargarMisMovimientos = async () => {
+    setErrorMov('');
+    try {
+      const res = await fetch(`${API}/api/inventario/mio/movimientos`, { headers });
+      if (res.ok) {
+        setMisMovimientos(await res.json());
+      } else if (res.status === 404) {
+        setMisMovimientos([]);
+        setErrorMov(await res.text());
+      } else {
+        throw new Error();
+      }
+    } catch {
+      setErrorMov('No se pudieron cargar los movimientos. Si la sesión venció, cierra sesión y vuelve a entrar.');
+    }
+  };
 
   // Filas de productos por ubicación: sirven para calcular la ocupación y para la salida
   const cargarDatos = async () => {
@@ -80,9 +143,13 @@ export default function Inventario() {
   };
 
   useEffect(() => {
-    cargarDatos();
-    cargarCatalogos();
-  }, []);
+    if (verMiInventario) cargarMio();
+    if (verMisMovimientos) cargarMisMovimientos();
+    if (verGestion) {
+      cargarDatos();
+      cargarCatalogos();
+    }
+  }, [verMiInventario, verGestion, verMisMovimientos]);
 
   // ---------- CÁLCULOS ----------
 
@@ -92,7 +159,12 @@ export default function Inventario() {
           .filter((inv) => (tipo === 'CD' ? inv.centroDistribucion?.id === id : inv.tienda?.id === id))
           .reduce((suma, inv) => suma + (inv.cantidad || 0), 0);
 
-  // Tabla principal: CD y tiendas que ya tienen inventario creado
+  // El admin gestiona todos los CD; el encargado de CD solo el suyo (el backend igual lo valida)
+  const centrosVisibles = puedeAdministrar
+      ? centros
+      : centros.filter((c) => c.encargado?.username === usuarioActual);
+
+  // Tabla de gestión del admin: CD y tiendas que ya tienen inventario creado
   const inventariosCreados = [
     ...centros
         .filter((c) => c.capacidadMaxima != null)
@@ -109,8 +181,8 @@ export default function Inventario() {
       modal === 'crear'
           ? listaPorTipo.filter((u) => u.capacidadMaxima == null)
           : modal === 'entrada'
-              ? centros.filter((c) => c.capacidadMaxima != null && cdAbierto(c))
-              : centros.filter(cdAbierto);
+              ? centrosVisibles.filter((c) => c.capacidadMaxima != null && cdAbierto(c))
+              : centrosVisibles.filter(cdAbierto);
 
   const ubicacionSel = listaPorTipo.find((u) => u.id === Number(form.ubicacionId));
 
@@ -252,6 +324,8 @@ export default function Inventario() {
         if (modal === 'crear' || modal === 'editar') cargarCatalogos();
         cerrarModal();
         cargarDatos();
+        if (verMiInventario) cargarMio(); // la ocupación de "Mi inventario" también cambió
+        if (verMisMovimientos) cargarMisMovimientos(); // aparece el movimiento nuevo
       } else {
         setErrorModal((await res.text()) || 'No se pudo guardar. Revisa que la sesión siga activa.');
       }
@@ -264,10 +338,26 @@ export default function Inventario() {
 
   // ---------- ESTILOS ----------
 
+  const claseTab = (nombre) =>
+      `pb-2.5 text-sm font-medium border-b-2 transition-colors ${
+          pestana === nombre
+              ? 'border-[#1e3a5f] text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+      }`;
+
   const etiqueta = 'block text-sm font-medium text-slate-700 mb-1.5';
   const campo =
       'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10';
   const ayuda = 'text-xs text-slate-500 mt-1.5';
+
+  const badgeEstado = (abierta) => (
+      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+          abierta ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+      }`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${abierta ? 'bg-green-500' : 'bg-red-500'}`} />
+        {abierta ? 'Activo' : 'Inactivo'}
+    </span>
+  );
 
   // ---------- VISTA ----------
 
@@ -278,19 +368,29 @@ export default function Inventario() {
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Inventario</h1>
-              <p className="text-sm text-slate-500 mt-1">Inventario de centros de distribución y tiendas</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {verGestion ? 'Inventario de centros de distribución y tiendas' : 'Consulta del inventario de tu tienda'}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <button className="data-table-primary-button" onClick={() => abrirModal('crear')}>
-                + Crear inventario
-              </button>
-              <button className="data-table-primary-button" onClick={() => abrirModal('entrada')}>
-                + Registrar entrada
-              </button>
-              <button className="data-table-primary-button" onClick={() => abrirModal('salida')}>
-                + Registrar salida
-              </button>
-            </div>
+            {pestana === 'gestion' && (
+                <div className="flex flex-wrap gap-3">
+                  {puedeAdministrar && (
+                      <button className="data-table-primary-button" onClick={() => abrirModal('crear')}>
+                        + Crear inventario
+                      </button>
+                  )}
+                  {puedeMoverStock && (
+                      <>
+                        <button className="data-table-primary-button" onClick={() => abrirModal('entrada')}>
+                          + Registrar entrada
+                        </button>
+                        <button className="data-table-primary-button" onClick={() => abrirModal('salida')}>
+                          + Registrar salida
+                        </button>
+                      </>
+                  )}
+                </div>
+            )}
           </div>
 
           {mensaje && (
@@ -298,79 +398,240 @@ export default function Inventario() {
                 {mensaje}
               </div>
           )}
-          {error && (
-              <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
-                {error}
+
+          {/* PESTAÑAS: solo si el rol tiene las dos */}
+          {verMiInventario && verGestion && (
+              <div className="flex gap-6 border-b border-slate-200 mb-4">
+                <button className={claseTab('mio')} onClick={() => setPestana('mio')}>
+                  Mi inventario
+                </button>
+                <button className={claseTab('gestion')} onClick={() => setPestana('gestion')}>
+                  Gestión
+                </button>
               </div>
           )}
 
-          {/* TABLA: inventarios creados */}
-          <div className="data-table-card">
-            <div className="data-table-scroll">
-              <table className="data-table">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th>Tipo</th>
-                  <th>Ubicación</th>
-                  <th>Encargado</th>
-                  <th>Ocupación</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {inventariosCreados.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center text-sm text-slate-400 py-10">
-                        Aún no hay inventarios creados. Usa "Crear inventario" para empezar.
-                      </td>
-                    </tr>
-                ) : (
-                    inventariosCreados.map((u) => {
-                      const total = totalEn(u.tipoUb, u.id);
-                      return (
-                          <tr key={`${u.tipoUb}-${u.id}`} className="border-b border-slate-100 last:border-0">
-                            <td>{u.tipoUb}</td>
-                            <td className="font-medium text-slate-900">{u.nombre}</td>
-                            <td>{nombreEncargado(u)}</td>
-                            <td>
-                              {total} / {u.capacidadMaxima}
-                              {total < u.capacidadMinima && (
-                                  <span className="ml-2 text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
-                              Stock bajo
-                            </span>
-                              )}
-                            </td>
-                            <td>
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
-                              u.abierta ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${u.abierta ? 'bg-green-500' : 'bg-red-500'}`} />
-                            {u.abierta ? 'Activo' : 'Inactivo'}
-                          </span>
-                            </td>
-                            <td>
-                              <button
-                                  type="button"
-                                  onClick={() => abrirEditar(u)}
-                                  aria-label={`Editar inventario de ${u.nombre}`}
-                                  title="Editar"
-                                  className="data-table-action"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
-                                </svg>
-                              </button>
-                            </td>
-                          </tr>
-                      );
-                    })
+          {/* ---------- MI INVENTARIO ---------- */}
+          {pestana === 'mio' && (
+              <>
+                {errorMio && (
+                    <div className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                      {errorMio}
+                    </div>
                 )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+
+                {mio && (
+                    <>
+                      {/* Tarjeta de la ubicación */}
+                      <div className="data-table-card mb-4 p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                              {mio.tipo === 'CD' ? 'Centro de distribución' : 'Tienda'}
+                            </p>
+                            <h2 className="text-lg font-semibold text-slate-900">{mio.nombre}</h2>
+                          </div>
+                          {badgeEstado(mio.activa)}
+                        </div>
+
+                        {mio.capacidadMaxima == null ? (
+                            <p className="mt-4 text-sm text-slate-500">
+                              Esta ubicación aún no tiene inventario creado. El administrador debe crearlo.
+                            </p>
+                        ) : (
+                            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                              <div>
+                                <p className="text-xs text-slate-500">Ocupación actual</p>
+                                <p className="text-xl font-semibold text-slate-900">
+                                  {mio.ocupacion} / {mio.capacidadMaxima}
+                                </p>
+                                {mio.ocupacion < mio.capacidadMinima && (
+                                    <span className="mt-1 inline-block text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
+                            Stock bajo
+                          </span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-500">Capacidad mínima</p>
+                                <p className="text-xl font-semibold text-slate-900">{mio.capacidadMinima}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-500">Capacidad máxima</p>
+                                <p className="text-xl font-semibold text-slate-900">{mio.capacidadMaxima}</p>
+                              </div>
+                            </div>
+                        )}
+                      </div>
+
+                      {/* Productos de la ubicación */}
+                      <div className="data-table-card">
+                        <div className="data-table-scroll">
+                          <table className="data-table">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                              <th>ID</th>
+                              <th>Producto</th>
+                              <th>Categoría</th>
+                              <th>Cantidad</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {mio.productos.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="text-center text-sm text-slate-400 py-10">
+                                    Aún no hay productos en esta ubicación.
+                                  </td>
+                                </tr>
+                            ) : (
+                                mio.productos.map((p) => (
+                                    <tr key={p.identificador} className="border-b border-slate-100 last:border-0">
+                                      <td>{p.identificador}</td>
+                                      <td className="font-medium text-slate-900">{p.nombre}</td>
+                                      <td>{p.categoria}</td>
+                                      <td>
+                                        {p.cantidad}
+                                        {p.cantidad === 0 && (
+                                            <span className="ml-2 text-xs text-red-700 bg-red-50 rounded-full px-2 py-0.5">
+                                    Sin existencias
+                                  </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                ))
+                            )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                )}
+              </>
+          )}
+
+          {/* ---------- GESTIÓN ---------- */}
+          {pestana === 'gestion' && verGestion && (
+              <>
+                {error && (
+                    <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+                      {error}
+                    </div>
+                )}
+
+                {puedeAdministrar ? (
+                    /* Admin: inventarios creados */
+                    <div className="data-table-card">
+                      <div className="data-table-scroll">
+                        <table className="data-table">
+                          <thead className="bg-slate-50 border-b border-slate-200">
+                          <tr>
+                            <th>Tipo</th>
+                            <th>Ubicación</th>
+                            <th>Encargado</th>
+                            <th>Ocupación</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                          </tr>
+                          </thead>
+                          <tbody>
+                          {inventariosCreados.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="text-center text-sm text-slate-400 py-10">
+                                  Aún no hay inventarios creados. Usa "Crear inventario" para empezar.
+                                </td>
+                              </tr>
+                          ) : (
+                              inventariosCreados.map((u) => {
+                                const total = totalEn(u.tipoUb, u.id);
+                                return (
+                                    <tr key={`${u.tipoUb}-${u.id}`} className="border-b border-slate-100 last:border-0">
+                                      <td>{u.tipoUb}</td>
+                                      <td className="font-medium text-slate-900">{u.nombre}</td>
+                                      <td>{nombreEncargado(u)}</td>
+                                      <td>
+                                        {total} / {u.capacidadMaxima}
+                                        {total < u.capacidadMinima && (
+                                            <span className="ml-2 text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
+                                    Stock bajo
+                                  </span>
+                                        )}
+                                      </td>
+                                      <td>{badgeEstado(u.abierta)}</td>
+                                      <td>
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirEditar(u)}
+                                            aria-label={`Editar inventario de ${u.nombre}`}
+                                            title="Editar"
+                                            className="data-table-action"
+                                        >
+                                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                                          </svg>
+                                        </button>
+                                      </td>
+                                    </tr>
+                                );
+                              })
+                          )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                ) : (
+                    /* Encargado de CD: movimientos de su inventario */
+                    <>
+                      {errorMov && (
+                          <div className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                            {errorMov}
+                          </div>
+                      )}
+                      <h2 className="mb-3 text-sm font-semibold text-slate-700">Movimientos de mi inventario</h2>
+                      <div className="data-table-card">
+                        <div className="data-table-scroll">
+                          <table className="data-table">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                              <th>Fecha y hora</th>
+                              <th>Tipo</th>
+                              <th>ID</th>
+                              <th>Producto</th>
+                              <th>Cantidad</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {misMovimientos.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="text-center text-sm text-slate-400 py-10">
+                                    Aún no hay movimientos en tu centro de distribución.
+                                  </td>
+                                </tr>
+                            ) : (
+                                misMovimientos.map((m) => {
+                                  const [etiquetaTipo, claseTipo] = TIPO_MOV[m.tipo] ?? [m.tipo, 'bg-slate-100 text-slate-700'];
+                                  return (
+                                      <tr key={m.id} className="border-b border-slate-100 last:border-0">
+                                        <td>{new Date(m.fecha).toLocaleString('es-CO')}</td>
+                                        <td>
+                                  <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${claseTipo}`}>
+                                    {etiquetaTipo}
+                                  </span>
+                                        </td>
+                                        <td>{m.identificador}</td>
+                                        <td className="font-medium text-slate-900">{m.producto}</td>
+                                        <td>{m.cantidad}</td>
+                                      </tr>
+                                  );
+                                })
+                            )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                )}
+              </>
+          )}
         </div>
 
         {/* MODAL: CREAR / ENTRADA / SALIDA / EDITAR */}
@@ -447,7 +708,9 @@ export default function Inventario() {
                         )}
                         {modal === 'entrada' && ubicaciones.length === 0 && (
                             <p className={ayuda}>
-                              Ningún CD abierto tiene inventario creado. Primero usa "Crear inventario".
+                              {puedeAdministrar
+                                  ? 'Ningún CD abierto tiene inventario creado. Primero usa "Crear inventario".'
+                                  : 'Tu CD no tiene inventario creado o está inactivo.'}
                             </p>
                         )}
                         {modal === 'entrada' && ubicacionSel && (

@@ -40,6 +40,8 @@ const enviarPut = async (url, body, mensajeOk) => {
     return mensaje === mensajeOk ? null : mensaje
 }
 
+// HUS-02: puedeEditar = solo admin (registrar, editar y agregar productos al CD).
+// Los encargados de CD solo consultan.
 export default function CentrosDistribucion({ puedeEditar }) {
     const [centros, setCentros] = useState([])
     const [encargados, setEncargados] = useState([])
@@ -60,8 +62,9 @@ export default function CentrosDistribucion({ puedeEditar }) {
 
     useEffect(() => {
         cargarCentros()
-        cargarEncargados()
-    }, [])
+        // Los encargados disponibles solo se usan en los formularios (solo admin)
+        if (puedeEditar) cargarEncargados()
+    }, [puedeEditar])
 
     const cargarCentros = async () => {
         try {
@@ -285,6 +288,7 @@ export default function CentrosDistribucion({ puedeEditar }) {
         return (
             <InventarioCD
                 centro={centroInventario}
+                puedeAgregar={puedeEditar}
                 onVolver={() => {
                     setCentroInventario(null)
                     cargarCentros()
@@ -299,17 +303,21 @@ export default function CentrosDistribucion({ puedeEditar }) {
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-xl font-bold text-slate-900">Centros de Distribución</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Gestión de centros de distribución (CD)</p>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        {puedeEditar ? 'Gestión de centros de distribución (CD)' : 'Consulta de centros de distribución (CD)'}
+                    </p>
                 </div>
-                <button
-                    onClick={abrirModal}
-                    className="data-table-primary-button"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Registrar CD
-                </button>
+                {puedeEditar && (
+                    <button
+                        onClick={abrirModal}
+                        className="data-table-primary-button"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Registrar CD
+                    </button>
+                )}
             </div>
 
             {/* Notificación de éxito */}
@@ -426,8 +434,8 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 </div>
             </div>
 
-            {/* Modal Registrar CD */}
-            {modalAbierto && (
+            {/* Modal Registrar CD (solo admin) */}
+            {puedeEditar && modalAbierto && (
                 <Modal title="Registrar centro de distribución" onClose={cerrarModal} size="md">
                     <div className="space-y-4">
                         <Field label="Nombre del CD *" error={errores.nombre}>
@@ -469,8 +477,8 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 </Modal>
             )}
 
-            {/* Modal Editar CD (HU3.6) */}
-            {modalEditarAbierto && (
+            {/* Modal Editar CD (HU3.6, solo admin) */}
+            {puedeEditar && modalEditarAbierto && (
                 <Modal
                     title={confirmacionEstadoAbierta ? 'Confirmar cambio de estado' : 'Editar centro de distribución'}
                     onClose={cerrarModalEditar}
