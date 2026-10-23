@@ -189,6 +189,16 @@ public class InventarioController {
         if (origen.getCantidad() < req.getCantidad()) {
             return ResponseEntity.status(409).body("Error: Stock insuficiente en el CD. Disponible: " + origen.getCantidad());
         }
+        // 4b. La tienda debe tener su inventario creado y espacio suficiente
+        if (tienda.getCapacidadMaxima() == null) {
+            return ResponseEntity.status(409).body("Error: La tienda no tiene inventario creado. Primero use \"Crear inventario\".");
+        }
+        long totalTienda = inventarioRepository.totalEnTienda(tienda.getId());
+        if (totalTienda + req.getCantidad() > tienda.getCapacidadMaxima()) {
+            long disponible = Math.max(0, tienda.getCapacidadMaxima() - totalTienda);
+            return ResponseEntity.status(409).body("Error: El despacho supera la capacidad máxima de la tienda ("
+                    + tienda.getCapacidadMaxima() + "). Actualmente tiene " + totalTienda + ", espacio disponible: " + disponible + ".");
+        }
 
         // 5. Fila del producto en la tienda (si nunca lo ha tenido, se crea en 0)
         Inventario destino = inventarioRepository
