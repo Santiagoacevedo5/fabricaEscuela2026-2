@@ -510,6 +510,33 @@ public class InventarioController {
         return ResponseEntity.status(404).body("No tiene un centro de distribución ni una tienda asignada.");
     }
 
+    // HUS-02 "Movimientos de mi inventario": entradas y salidas del CD del encargado logueado,
+    // del más reciente al más antiguo. El servidor decide el CD a partir del usuario del token.
+    @GetMapping("/mio/movimientos")
+    public ResponseEntity<?> misMovimientos(Authentication auth) {
+        CentroDistribucion cd = centroRepository.findByEncargado_Username(auth.getName()).orElse(null);
+        if (cd == null) {
+            return ResponseEntity.status(404).body("No tiene un centro de distribución asignado.");
+        }
+
+        List<Map<String, Object>> movimientos = movimientoRepository
+                .findByInventarioCentroDistribucionIdOrderByIdDesc(cd.getId())
+                .stream()
+                .map(m -> {
+                    Map<String, Object> fila = new LinkedHashMap<>();
+                    fila.put("id", m.getId());
+                    fila.put("fecha", m.getFecha());
+                    fila.put("tipo", m.getTipo());
+                    fila.put("identificador", m.getInventario().getProducto().getIdentificador());
+                    fila.put("producto", m.getInventario().getProducto().getNombre());
+                    fila.put("cantidad", m.getCantidad());
+                    return fila;
+                })
+                .toList();
+
+        return ResponseEntity.ok(movimientos);
+    }
+
     // Arma la respuesta de "Mi inventario". Se usa LinkedHashMap porque la capacidad puede
     // venir vacía (inventario aún no creado) y Map.of no acepta valores null.
     private Map<String, Object> resumenUbicacion(String tipo, String nombre, Integer minimo, Integer maximo,
