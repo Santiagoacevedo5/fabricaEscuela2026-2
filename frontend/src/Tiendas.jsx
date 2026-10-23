@@ -8,7 +8,8 @@ const nombreDe = (e) => e.nombre ?? e.name;
 // Todas las rutas de tiendas y centros exigen sesión: se envía el token guardado en el login
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
-export default function Tiendas() {
+// HUS-02: puedeEditar = solo admin. Los encargados solo consultan.
+export default function Tiendas({ puedeEditar }) {
   const [tiendaInventario, setTiendaInventario] = useState(null);
   const [tiendas, setTiendas] = useState([]);
   const [encargados, setEncargados] = useState([]);
@@ -41,9 +42,12 @@ export default function Tiendas() {
 
   useEffect(() => {
     cargarTiendas();
-    cargarEncargados();
-    cargarCentros();
-  }, []);
+    // Encargados y CD solo se usan en los formularios de registrar/editar (solo admin)
+    if (puedeEditar) {
+      cargarEncargados();
+      cargarCentros();
+    }
+  }, [puedeEditar]);
 
   const cargarTiendas = async () => {
     try {
@@ -213,14 +217,18 @@ export default function Tiendas() {
           <div className="mb-6 flex items-start justify-between">
             <div>
               <h1 className="text-xl font-bold text-slate-900">Tiendas</h1>
-              <p className="mt-0.5 text-sm text-slate-500">Gestión de puntos de venta</p>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {puedeEditar ? 'Gestión de puntos de venta' : 'Consulta de puntos de venta'}
+              </p>
             </div>
-            <button
-                onClick={() => setModalAbierto(true)}
-                className="data-table-primary-button"
-            >
-              + Registrar tienda
-            </button>
+            {puedeEditar && (
+                <button
+                    onClick={() => setModalAbierto(true)}
+                    className="data-table-primary-button"
+                >
+                  + Registrar tienda
+                </button>
+            )}
           </div>
 
           <div className="mb-4 flex flex-wrap gap-3">
@@ -297,18 +305,20 @@ export default function Tiendas() {
                                   <circle cx="12" cy="12" r="3" strokeWidth={2} />
                                 </svg>
                               </button>
-                              <button
-                                  type="button"
-                                  onClick={() => abrirModalEditar(t)}
-                                  aria-label={`Editar ${t.nombre}`}
-                                  title="Editar"
-                                  className="data-table-action"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
-                                </svg>
-                              </button>
+                              {puedeEditar && (
+                                  <button
+                                      type="button"
+                                      onClick={() => abrirModalEditar(t)}
+                                      aria-label={`Editar ${t.nombre}`}
+                                      title="Editar"
+                                      className="data-table-action"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                                    </svg>
+                                  </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -323,8 +333,8 @@ export default function Tiendas() {
           </div>
         </main>
 
-        {/* Modal Registrar Tienda reutilizando <Modal /> */}
-        {modalAbierto && (
+        {/* Modal Registrar Tienda reutilizando <Modal /> (solo admin) */}
+        {puedeEditar && modalAbierto && (
             <Modal title="Registrar tienda" onClose={() => setModalAbierto(false)}>
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '16px' }}>
@@ -403,8 +413,8 @@ export default function Tiendas() {
             </Modal>
         )}
 
-        {/* Modal Editar Tienda reutilizando <Modal /> (HU3.5) */}
-        {modalEditarAbierto && (
+        {/* Modal Editar Tienda reutilizando <Modal /> (HU3.5, solo admin) */}
+        {puedeEditar && modalEditarAbierto && (
             <Modal
                 title={confirmacionEstado ? 'Confirmar cambio de estado' : 'Editar tienda'}
                 onClose={() => {
