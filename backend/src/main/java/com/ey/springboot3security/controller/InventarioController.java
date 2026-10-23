@@ -11,6 +11,7 @@ import com.ey.springboot3security.repository.CentroDistribucionRepository;
 import com.ey.springboot3security.repository.InventarioRepository;
 import com.ey.springboot3security.repository.ProductoRepository;
 import com.ey.springboot3security.repository.TiendaRepository;
+import com.ey.springboot3security.service.CentroDistribucionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,8 @@ public class InventarioController {
     private final TiendaRepository tiendaRepository;
     private final CentroDistribucionRepository centroRepository;
     private final MovimientoInventarioRepository movimientoRepository;
+    // Se reutiliza para cambiar el estado del CD con las reglas del equipo (HU3.6)
+    private final CentroDistribucionService centroDistribucionService;
 
     @PostMapping
     public ResponseEntity<?> crearInventario(@RequestBody Inventario inventario) {
@@ -88,13 +91,13 @@ public class InventarioController {
         return inventarioRepository.findAll();
     }
 
+    // Endpoint anterior de entradas y salidas: se cerró porque no valida capacidad ni estado.
+    // Las entradas van por /entradas y las salidas de un CD son despachos (/despachos).
     @PostMapping("/movimientos")
-    @Transactional // el movimiento y el cambio de stock se guardan juntos o ninguno
     public ResponseEntity<?> registrarMovimiento(@RequestBody MovimientoInventario movimiento) {
-        if ("VENTA".equals(movimiento.getTipo())) {
-            return ResponseEntity.badRequest().body("Error: Use el endpoint de ventas para registrar una venta.");
-        }
-        return guardarMovimiento(movimiento, false);
+        return ResponseEntity.status(410).body(
+                "Error: Este endpoint ya no se usa. Use /api/inventario/entradas para entradas, "
+                        + "/api/inventario/despachos para salidas de un CD y /api/inventario/ventas para ventas.");
     }
 
     @PostMapping("/ventas")
@@ -125,6 +128,10 @@ public class InventarioController {
         }
         if (venta && inventario.getTienda() == null) {
             return ResponseEntity.badRequest().body("Error: Las ventas solo se pueden registrar en una tienda.");
+        }
+        // Una tienda cerrada no puede vender
+        if (venta && Boolean.FALSE.equals(inventario.getTienda().getActiva())) {
+            return ResponseEntity.status(409).body("Error: La tienda está inactiva. No se pueden registrar ventas.");
         }
 
         long nuevaCantidad = "ENTRADA".equals(tipo)
@@ -163,13 +170,16 @@ public class InventarioController {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
 
-        // 2. El origen debe ser inventario de un CD
+        // 2. El origen debe ser inventario de un CD abierto
         Inventario origen = inventarioRepository.findById(req.getInventarioId()).orElse(null);
         if (origen == null) {
             return ResponseEntity.status(404).body("Error: El inventario no existe.");
         }
         if (origen.getCentroDistribucion() == null) {
             return ResponseEntity.badRequest().body("Error: Solo se puede despachar desde el inventario de un centro de distribución.");
+        }
+        if ("INACTIVO".equals(origen.getCentroDistribucion().getEstado())) {
+            return ResponseEntity.status(409).body("Error: El centro de distribución está inactivo. No se pueden hacer despachos.");
         }
 
         // 3. La tienda debe existir, estar activa y pertenecer a ese CD
@@ -189,6 +199,7 @@ public class InventarioController {
         if (origen.getCantidad() < req.getCantidad()) {
             return ResponseEntity.status(409).body("Error: Stock insuficiente en el CD. Disponible: " + origen.getCantidad());
         }
+
         // 4b. La tienda debe tener su inventario creado y espacio suficiente
         if (tienda.getCapacidadMaxima() == null) {
             return ResponseEntity.status(409).body("Error: La tienda no tiene inventario creado. Primero use \"Crear inventario\".");
@@ -315,13 +326,16 @@ public class InventarioController {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
 
-        // 2. El CD debe existir y tener su inventario creado
+        // 2. El CD debe existir, tener su inventario creado y estar abierto
         CentroDistribucion cd = centroRepository.findById(req.getCentroId()).orElse(null);
         if (cd == null) {
             return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
         }
         if (cd.getCapacidadMaxima() == null) {
             return ResponseEntity.status(409).body("Error: Este centro de distribución no tiene inventario creado. Primero use \"Crear inventario\".");
+        }
+        if ("INACTIVO".equals(cd.getEstado())) {
+            return ResponseEntity.status(409).body("Error: El centro de distribución está inactivo. No se pueden registrar entradas.");
         }
 
         // 3. El producto debe existir
@@ -358,5 +372,81 @@ public class InventarioController {
         movimiento.setTipo("ENTRADA");
         movimiento.setCantidad(req.getCantidad());
         return ResponseEntity.status(201).body(movimientoRepository.save(movimiento));
+    }
+
+    // Editar inventario de una ubicación: cambia su capacidad y la abre o cierra.
+    // Cerrar el inventario es cerrar la ubicación (estado del CD / activa de la tienda).
+    @PutMapping("/capacidad")
+    @Transactional
+    public ResponseEntity<?> editarInventarioUbicacion(@RequestBody CapacidadRequest req) {
+        Integer min = req.getCapacidadMinima();
+        Integer max = req.getCapacidadMaxima();
+
+        // 1. Datos obligatorios y coherentes (igual que al crear)
+        if (req.getUbicacionId() == null) {
+            return ResponseEntity.badRequest().body("Error: Debe seleccionar la ubicación.");
+        }
+        if (min == null || max == null) {
+            return ResponseEntity.badRequest().body("Error: La capacidad mínima y la máxima son obligatorias.");
+        }
+        if (min < 0) {
+            return ResponseEntity.badRequest().body("Error: La capacidad mínima no puede ser negativa.");
+        }
+        if (max <= min) {
+            return ResponseEntity.badRequest().body("Error: La capacidad máxima debe ser mayor que la mínima.");
+        }
+
+        if ("CD".equals(req.getTipo())) {
+            CentroDistribucion cd = centroRepository.findById(req.getUbicacionId()).orElse(null);
+            if (cd == null) {
+                return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
+            }
+            if (cd.getCapacidadMaxima() == null) {
+                return ResponseEntity.status(409).body("Error: Este centro de distribución no tiene inventario creado. Use \"Crear inventario\".");
+            }
+            long total = inventarioRepository.totalEnCentro(cd.getId());
+            if (max < total) {
+                return ResponseEntity.status(409).body("Error: La capacidad máxima no puede ser menor a las unidades que ya tiene (" + total + ").");
+            }
+            cd.setCapacidadMinima(min);
+            cd.setCapacidadMaxima(max);
+            centroRepository.save(cd);
+
+            // El estado se cambia con el método del equipo, que además quita el encargado al cerrar
+            if (req.getActivo() != null) {
+                String nuevoEstado = req.getActivo() ? "ACTIVO" : "INACTIVO";
+                if (!nuevoEstado.equals(cd.getEstado())) {
+                    CentroDistribucion cambio = new CentroDistribucion();
+                    cambio.setEstado(nuevoEstado);
+                    centroDistribucionService.actualizarEstado(cd.getId(), cambio);
+                }
+            }
+        } else if ("TIENDA".equals(req.getTipo())) {
+            Tienda tienda = tiendaRepository.findById(req.getUbicacionId()).orElse(null);
+            if (tienda == null) {
+                return ResponseEntity.status(404).body("Error: La tienda no existe.");
+            }
+            if (tienda.getCapacidadMaxima() == null) {
+                return ResponseEntity.status(409).body("Error: Esta tienda no tiene inventario creado. Use \"Crear inventario\".");
+            }
+            long total = inventarioRepository.totalEnTienda(tienda.getId());
+            if (max < total) {
+                return ResponseEntity.status(409).body("Error: La capacidad máxima no puede ser menor a las unidades que ya tiene (" + total + ").");
+            }
+            tienda.setCapacidadMinima(min);
+            tienda.setCapacidadMaxima(max);
+            if (req.getActivo() != null) {
+                tienda.setActiva(req.getActivo());
+            }
+            tiendaRepository.save(tienda);
+        } else {
+            return ResponseEntity.badRequest().body("Error: El tipo debe ser CD o TIENDA.");
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "Inventario actualizado exitosamente.",
+                "capacidadMinima", min,
+                "capacidadMaxima", max
+        ));
     }
 }

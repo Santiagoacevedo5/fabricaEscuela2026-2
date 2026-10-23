@@ -9,4 +9,5 @@ public class CapacidadRequest {
     private Integer ubicacionId;
     private Integer capacidadMinima;
     private Integer capacidadMaxima;
+    private Boolean activo;
 }
