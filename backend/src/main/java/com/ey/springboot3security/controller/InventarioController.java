@@ -7,13 +7,17 @@ import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Inventario;
 import com.ey.springboot3security.entity.Producto;
 import com.ey.springboot3security.entity.Tienda;
+import com.ey.springboot3security.entity.UserInfo;
 import com.ey.springboot3security.repository.CentroDistribucionRepository;
 import com.ey.springboot3security.repository.InventarioRepository;
 import com.ey.springboot3security.repository.ProductoRepository;
 import com.ey.springboot3security.repository.TiendaRepository;
 import com.ey.springboot3security.service.CentroDistribucionService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.ey.springboot3security.entity.MovimientoInventario;
 import com.ey.springboot3security.repository.MovimientoInventarioRepository;
@@ -28,6 +32,8 @@ import java.util.Map;
 @RequestMapping("/api/inventario")
 public class InventarioController {
 
+    private static final Logger log = LoggerFactory.getLogger(InventarioController.class);
+
     private final InventarioRepository inventarioRepository;
     private final ProductoRepository productoRepository;
     private final TiendaRepository tiendaRepository;
@@ -35,6 +41,24 @@ public class InventarioController {
     private final MovimientoInventarioRepository movimientoRepository;
     // Se reutiliza para cambiar el estado del CD con las reglas del equipo (HU3.6)
     private final CentroDistribucionService centroDistribucionService;
+
+    // ---------- HUS-02: control de acceso por ubicación ----------
+
+    private static boolean esAdmin(Authentication auth) {
+        return auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    }
+
+    // El usuario logueado es el encargado asignado a esa ubicación
+    private static boolean esEncargadoDe(UserInfo encargado, Authentication auth) {
+        return encargado != null && auth.getName().equals(encargado.getUsername());
+    }
+
+    // Responde 403 y deja registrado el intento con usuario, fecha y hora (requisito de la HUS-02)
+    private ResponseEntity<?> accesoDenegado(Authentication auth, String accion, String ubicacion) {
+        log.warn("ACCESO DENEGADO | usuario={} | accion={} | ubicacion={} | fecha={}",
+                auth.getName(), accion, ubicacion, LocalDateTime.now());
+        return ResponseEntity.status(403).body("Acceso no autorizado: solo puede operar la ubicación que tiene asignada.");
+    }
 
     @PostMapping
     public ResponseEntity<?> crearInventario(@RequestBody Inventario inventario) {
@@ -102,14 +126,14 @@ public class InventarioController {
 
     @PostMapping("/ventas")
     @Transactional
-    public ResponseEntity<?> registrarVenta(@RequestBody MovimientoInventario movimiento) {
+    public ResponseEntity<?> registrarVenta(@RequestBody MovimientoInventario movimiento, Authentication auth) {
         if (!"VENTA".equals(movimiento.getTipo())) {
             return ResponseEntity.badRequest().body("Error: El tipo debe ser VENTA.");
         }
-        return guardarMovimiento(movimiento, true);
+        return guardarMovimiento(movimiento, true, auth);
     }
 
-    private ResponseEntity<?> guardarMovimiento(MovimientoInventario movimiento, boolean venta) {
+    private ResponseEntity<?> guardarMovimiento(MovimientoInventario movimiento, boolean venta, Authentication auth) {
         String tipo = movimiento.getTipo();
         if (!venta && !"ENTRADA".equals(tipo) && !"SALIDA".equals(tipo)) {
             return ResponseEntity.badRequest().body("Error: El tipo debe ser ENTRADA o SALIDA.");
@@ -128,6 +152,10 @@ public class InventarioController {
         }
         if (venta && inventario.getTienda() == null) {
             return ResponseEntity.badRequest().body("Error: Las ventas solo se pueden registrar en una tienda.");
+        }
+        // HUS-02: el encargado de tienda solo vende en su propia tienda
+        if (venta && !esAdmin(auth) && !esEncargadoDe(inventario.getTienda().getEncargado(), auth)) {
+            return accesoDenegado(auth, "VENTA", "Tienda " + inventario.getTienda().getId());
         }
         // Una tienda cerrada no puede vender
         if (venta && Boolean.FALSE.equals(inventario.getTienda().getActiva())) {
@@ -161,7 +189,7 @@ public class InventarioController {
     // no deshace lo que ya se haya guardado (solo una excepción hace rollback).
     @PostMapping("/despachos")
     @Transactional
-    public ResponseEntity<?> registrarDespacho(@RequestBody DespachoRequest req) {
+    public ResponseEntity<?> registrarDespacho(@RequestBody DespachoRequest req, Authentication auth) {
         // 1. Datos obligatorios
         if (req.getInventarioId() == null || req.getTiendaId() == null) {
             return ResponseEntity.badRequest().body("Error: Debe indicar el inventario del CD y la tienda destino.");
@@ -170,13 +198,16 @@ public class InventarioController {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
 
-        // 2. El origen debe ser inventario de un CD abierto
+        // 2. El origen debe ser inventario de un CD abierto, y del CD del usuario (HUS-02)
         Inventario origen = inventarioRepository.findById(req.getInventarioId()).orElse(null);
         if (origen == null) {
             return ResponseEntity.status(404).body("Error: El inventario no existe.");
         }
         if (origen.getCentroDistribucion() == null) {
             return ResponseEntity.badRequest().body("Error: Solo se puede despachar desde el inventario de un centro de distribución.");
+        }
+        if (!esAdmin(auth) && !esEncargadoDe(origen.getCentroDistribucion().getEncargado(), auth)) {
+            return accesoDenegado(auth, "DESPACHO", "CD " + origen.getCentroDistribucion().getId());
         }
         if ("INACTIVO".equals(origen.getCentroDistribucion().getEstado())) {
             return ResponseEntity.status(409).body("Error: El centro de distribución está inactivo. No se pueden hacer despachos.");
@@ -317,7 +348,7 @@ public class InventarioController {
     // respetando la capacidad máxima del CD (suma de todos sus productos).
     @PostMapping("/entradas")
     @Transactional
-    public ResponseEntity<?> registrarEntrada(@RequestBody EntradaRequest req) {
+    public ResponseEntity<?> registrarEntrada(@RequestBody EntradaRequest req, Authentication auth) {
         // 1. Datos obligatorios
         if (req.getCentroId() == null || req.getProductoId() == null) {
             return ResponseEntity.badRequest().body("Error: Debe seleccionar el centro de distribución y el producto.");
@@ -326,10 +357,13 @@ public class InventarioController {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
 
-        // 2. El CD debe existir, tener su inventario creado y estar abierto
+        // 2. El CD debe existir, ser del usuario (HUS-02), tener su inventario creado y estar abierto
         CentroDistribucion cd = centroRepository.findById(req.getCentroId()).orElse(null);
         if (cd == null) {
             return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
+        }
+        if (!esAdmin(auth) && !esEncargadoDe(cd.getEncargado(), auth)) {
+            return accesoDenegado(auth, "ENTRADA", "CD " + cd.getId());
         }
         if (cd.getCapacidadMaxima() == null) {
             return ResponseEntity.status(409).body("Error: Este centro de distribución no tiene inventario creado. Primero use \"Crear inventario\".");
