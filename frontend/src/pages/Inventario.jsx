@@ -10,40 +10,31 @@ const FORM_INICIAL = {
   tiendaDestinoId: '',
   capacidadMinima: '',
   capacidadMaxima: '',
+  activo: true,
 };
 
 const TITULOS = {
   crear: 'Crear inventario',
   entrada: 'Registrar entrada',
   salida: 'Registrar salida',
+  editar: 'Editar inventario',
 };
 
 const MENSAJES = {
   crear: 'Inventario creado exitosamente.',
   entrada: 'Entrada registrada exitosamente.',
   despacho: 'Despacho registrado: las unidades salieron del CD y entraron a la tienda.',
+  editar: 'Inventario actualizado exitosamente.',
 };
-
-// Etiqueta y color de cada tipo de movimiento en la pestaña Movimientos
-const TIPO_MOV = {
-  ENTRADA: ['Entrada', 'bg-green-50 text-green-700'],
-  SALIDA: ['Salida', 'bg-orange-50 text-orange-700'],
-  VENTA: ['Venta', 'bg-blue-50 text-blue-700'],
-};
-
-// Dice si un inventario es de un CD o de una tienda, y su nombre
-const ubicacion = (inv) =>
-    inv.centroDistribucion
-        ? { tipo: 'CD', nombre: inv.centroDistribucion.nombre }
-        : { tipo: 'Tienda', nombre: inv.tienda?.nombre };
 
 // /api/tiendas devuelve el encargado como UserInfo (campo "name")
 const nombreEncargado = (u) => u?.encargado?.name ?? u?.encargado?.nombre ?? 'Sin encargado asignado';
 
+// Un CD está abierto si su estado no es INACTIVO; una tienda, si activa no es false
+const cdAbierto = (c) => c.estado !== 'INACTIVO';
+
 export default function Inventario() {
-  const [pestana, setPestana] = useState('inventario');
   const [inventarios, setInventarios] = useState([]);
-  const [movimientos, setMovimientos] = useState([]);
   const [centros, setCentros] = useState([]);
   const [tiendas, setTiendas] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -60,23 +51,19 @@ export default function Inventario() {
 
   // ---------- CARGA DE DATOS ----------
 
+  // Filas de productos por ubicación: sirven para calcular la ocupación y para la salida
   const cargarDatos = async () => {
     setError('');
     try {
-      const [resInv, resMov] = await Promise.all([
-        fetch(`${API}/api/inventario`, { headers }),
-        fetch(`${API}/api/inventario/movimientos`, { headers }),
-      ]);
-      if (!resInv.ok || !resMov.ok) throw new Error();
-      setInventarios(await resInv.json());
-      const movs = await resMov.json();
-      setMovimientos(movs.sort((a, b) => b.id - a.id)); // más reciente primero
+      const res = await fetch(`${API}/api/inventario`, { headers });
+      if (!res.ok) throw new Error();
+      setInventarios(await res.json());
     } catch {
       setError('No se pudo cargar el inventario. Si la sesión venció, cierra sesión y vuelve a entrar.');
     }
   };
 
-  // Listas para los desplegables: CD, tiendas y productos activos
+  // CD y tiendas (con su capacidad y estado) y productos activos
   const cargarCatalogos = async () => {
     try {
       const [resCd, resTi, resPr] = await Promise.all([
@@ -105,15 +92,25 @@ export default function Inventario() {
           .filter((inv) => (tipo === 'CD' ? inv.centroDistribucion?.id === id : inv.tienda?.id === id))
           .reduce((suma, inv) => suma + (inv.cantidad || 0), 0);
 
+  // Tabla principal: CD y tiendas que ya tienen inventario creado
+  const inventariosCreados = [
+    ...centros
+        .filter((c) => c.capacidadMaxima != null)
+        .map((c) => ({ ...c, tipoUb: 'CD', abierta: cdAbierto(c) })),
+    ...tiendas
+        .filter((t) => t.capacidadMaxima != null)
+        .map((t) => ({ ...t, tipoUb: 'Tienda', abierta: t.activa !== false })),
+  ];
+
   const listaPorTipo = form.tipo === 'CD' ? centros : tiendas;
 
-  // Crear: solo ubicaciones sin inventario. Entrada: solo CD con inventario. Salida: todos los CD.
+  // Crear: ubicaciones sin inventario. Entrada: CD abiertos con inventario. Salida: CD abiertos.
   const ubicaciones =
       modal === 'crear'
           ? listaPorTipo.filter((u) => u.capacidadMaxima == null)
           : modal === 'entrada'
-              ? listaPorTipo.filter((u) => u.capacidadMaxima != null)
-              : listaPorTipo;
+              ? centros.filter((c) => c.capacidadMaxima != null && cdAbierto(c))
+              : centros.filter(cdAbierto);
 
   const ubicacionSel = listaPorTipo.find((u) => u.id === Number(form.ubicacionId));
 
@@ -136,12 +133,27 @@ export default function Inventario() {
     setModal(tipoModal);
   };
 
+  // Editar: el modal se abre con los datos actuales de la ubicación
+  const abrirEditar = (u) => {
+    setForm({
+      ...FORM_INICIAL,
+      tipo: u.tipoUb,
+      ubicacionId: String(u.id),
+      capacidadMinima: String(u.capacidadMinima ?? ''),
+      capacidadMaxima: String(u.capacidadMaxima ?? ''),
+      activo: u.abierta,
+    });
+    setErrorModal('');
+    setMensaje('');
+    setModal('editar');
+  };
+
   const cerrarModal = () => setModal(null);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setForm((prev) => {
-      const nuevo = { ...prev, [name]: value };
+      const nuevo = { ...prev, [name]: type === 'checkbox' ? checked : value };
       if (name === 'tipo') {
         // un id de CD no sirve como id de tienda: se reinicia la selección
         nuevo.ubicacionId = '';
@@ -163,8 +175,9 @@ export default function Inventario() {
 
     let url;
     let body;
+    let metodo = 'POST';
 
-    if (modal === 'crear') {
+    if (modal === 'crear' || modal === 'editar') {
       const min = Number(form.capacidadMinima);
       const max = Number(form.capacidadMaxima);
       if (!form.ubicacionId || form.capacidadMinima === '' || form.capacidadMaxima === '') {
@@ -186,6 +199,10 @@ export default function Inventario() {
         capacidadMinima: min,
         capacidadMaxima: max,
       };
+      if (modal === 'editar') {
+        metodo = 'PUT';
+        body.activo = form.activo;
+      }
     } else {
       if (!form.ubicacionId || !form.productoId || form.cantidad === '') {
         setErrorModal('Todos los campos son obligatorios.');
@@ -225,13 +242,14 @@ export default function Inventario() {
     setGuardando(true);
     try {
       const res = await fetch(url, {
-        method: 'POST',
+        method: metodo,
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (res.status === 201) {
+      if (res.ok) {
         setMensaje(modal === 'salida' ? MENSAJES.despacho : MENSAJES[modal]);
-        if (modal === 'crear') cargarCatalogos(); // la capacidad quedó guardada en el CD o la tienda
+        // crear y editar cambian la capacidad o el estado guardados en el CD o la tienda
+        if (modal === 'crear' || modal === 'editar') cargarCatalogos();
         cerrarModal();
         cargarDatos();
       } else {
@@ -245,13 +263,6 @@ export default function Inventario() {
   };
 
   // ---------- ESTILOS ----------
-
-  const claseTab = (nombre) =>
-      `pb-2.5 text-sm font-medium border-b-2 transition-colors ${
-          pestana === nombre
-              ? 'border-[#1e3a5f] text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-      }`;
 
   const etiqueta = 'block text-sm font-medium text-slate-700 mb-1.5';
   const campo =
@@ -293,106 +304,76 @@ export default function Inventario() {
               </div>
           )}
 
-          {/* PESTAÑAS */}
-          <div className="flex gap-6 border-b border-slate-200 mb-4">
-            <button className={claseTab('inventario')} onClick={() => setPestana('inventario')}>
-              Inventario
-            </button>
-            <button className={claseTab('movimientos')} onClick={() => setPestana('movimientos')}>
-              Movimientos
-            </button>
-          </div>
-
+          {/* TABLA: inventarios creados */}
           <div className="data-table-card">
             <div className="data-table-scroll">
-              {pestana === 'inventario' ? (
-                  <table className="data-table">
-                    <thead className="bg-slate-50 border-b border-slate-200">
+              <table className="data-table">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th>Tipo</th>
+                  <th>Ubicación</th>
+                  <th>Encargado</th>
+                  <th>Ocupación</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {inventariosCreados.length === 0 ? (
                     <tr>
-                      <th>Tipo</th>
-                      <th>Ubicación</th>
-                      <th>ID</th>
-                      <th>Producto</th>
-                      <th>Cantidad disponible</th>
+                      <td colSpan={6} className="text-center text-sm text-slate-400 py-10">
+                        Aún no hay inventarios creados. Usa "Crear inventario" para empezar.
+                      </td>
                     </tr>
-                    </thead>
-                    <tbody>
-                    {inventarios.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center text-sm text-slate-400 py-10">
-                            Aún no hay productos en inventario. Crea el inventario de un CD y registra una entrada.
-                          </td>
-                        </tr>
-                    ) : (
-                        inventarios.map((inv) => {
-                          const ub = ubicacion(inv);
-                          return (
-                              <tr key={inv.id} className="border-b border-slate-100 last:border-0">
-                                <td>{ub.tipo}</td>
-                                <td>{ub.nombre}</td>
-                                <td>{inv.producto.identificador}</td>
-                                <td className="font-medium text-slate-900">{inv.producto.nombre}</td>
-                                <td>
-                                  {inv.cantidad}
-                                  {inv.cantidad === 0 && (
-                                      <span className="ml-2 text-xs text-red-700 bg-red-50 rounded-full px-2 py-0.5">
-                              Sin existencias
+                ) : (
+                    inventariosCreados.map((u) => {
+                      const total = totalEn(u.tipoUb, u.id);
+                      return (
+                          <tr key={`${u.tipoUb}-${u.id}`} className="border-b border-slate-100 last:border-0">
+                            <td>{u.tipoUb}</td>
+                            <td className="font-medium text-slate-900">{u.nombre}</td>
+                            <td>{nombreEncargado(u)}</td>
+                            <td>
+                              {total} / {u.capacidadMaxima}
+                              {total < u.capacidadMinima && (
+                                  <span className="ml-2 text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
+                              Stock bajo
                             </span>
-                                  )}
-                                </td>
-                              </tr>
-                          );
-                        })
-                    )}
-                    </tbody>
-                  </table>
-              ) : (
-                  <table className="data-table">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th>Fecha y hora</th>
-                      <th>Tipo</th>
-                      <th>Ubicación</th>
-                      <th>Producto</th>
-                      <th>Cantidad</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {movimientos.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center text-sm text-slate-400 py-10">
-                            Aún no hay movimientos registrados.
-                          </td>
-                        </tr>
-                    ) : (
-                        movimientos.map((m) => {
-                          const ub = ubicacion(m.inventario);
-                          const [etiquetaTipo, claseTipo] = TIPO_MOV[m.tipo];
-                          return (
-                              <tr key={m.id} className="border-b border-slate-100 last:border-0">
-                                <td>{new Date(m.fecha).toLocaleString('es-CO')}</td>
-                                <td>
-                          <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${claseTipo}`}>
-                            {etiquetaTipo}
+                              )}
+                            </td>
+                            <td>
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                              u.abierta ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${u.abierta ? 'bg-green-500' : 'bg-red-500'}`} />
+                            {u.abierta ? 'Activo' : 'Inactivo'}
                           </span>
-                                </td>
-                                <td>
-                                  {ub.tipo} - {ub.nombre}
-                                </td>
-                                <td className="font-medium text-slate-900">{m.inventario.producto.nombre}</td>
-                                <td>{m.cantidad}</td>
-                              </tr>
-                          );
-                        })
-                    )}
-                    </tbody>
-                  </table>
-              )}
+                            </td>
+                            <td>
+                              <button
+                                  type="button"
+                                  onClick={() => abrirEditar(u)}
+                                  aria-label={`Editar inventario de ${u.nombre}`}
+                                  title="Editar"
+                                  className="data-table-action"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4-1 9.513-9.513a1.875 1.875 0 0 0-2.652-2.652L8.348 13.348 7 17Z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                      );
+                    })
+                )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
-        {/* MODAL: CREAR INVENTARIO / REGISTRAR ENTRADA / REGISTRAR SALIDA */}
+        {/* MODAL: CREAR / ENTRADA / SALIDA / EDITAR */}
         {modal && (
             <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
@@ -426,45 +407,60 @@ export default function Inventario() {
                       </div>
                   )}
 
-                  {/* Ubicación */}
-                  <div>
-                    <label htmlFor="ubicacionId" className={etiqueta}>
-                      {form.tipo === 'CD' ? 'Centro de distribución' : 'Tienda'}
-                    </label>
-                    <select
-                        id="ubicacionId"
-                        name="ubicacionId"
-                        value={form.ubicacionId}
-                        onChange={handleChange}
-                        className={campo}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      {ubicaciones.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.nombre}
-                          </option>
-                      ))}
-                    </select>
-                    {modal === 'crear' && ubicaciones.length === 0 && (
-                        <p className={ayuda}>
-                          Todas las ubicaciones de este tipo ya tienen inventario creado.
-                        </p>
-                    )}
-                    {modal === 'entrada' && ubicaciones.length === 0 && (
-                        <p className={ayuda}>
-                          Ningún CD tiene inventario creado. Primero usa "Crear inventario".
-                        </p>
-                    )}
-                    {modal === 'entrada' && ubicacionSel && (
-                        <p className={ayuda}>
-                          Ocupación: {totalEn('CD', ubicacionSel.id)} / {ubicacionSel.capacidadMaxima} unidades
-                          (espacio disponible: {Math.max(0, ubicacionSel.capacidadMaxima - totalEn('CD', ubicacionSel.id))})
-                        </p>
-                    )}
-                  </div>
+                  {/* Ubicación: al editar se muestra fija (no se puede cambiar) */}
+                  {modal === 'editar' ? (
+                      <div>
+                        <label className={etiqueta}>{form.tipo === 'CD' ? 'Centro de distribución' : 'Tienda'}</label>
+                        <input
+                            type="text"
+                            value={ubicacionSel?.nombre ?? ''}
+                            disabled
+                            className={`${campo} bg-slate-50 text-slate-500`}
+                        />
+                        {ubicacionSel && (
+                            <p className={ayuda}>
+                              Ocupación actual: {totalEn(form.tipo, ubicacionSel.id)} unidades. El máximo no puede ser menor.
+                            </p>
+                        )}
+                      </div>
+                  ) : (
+                      <div>
+                        <label htmlFor="ubicacionId" className={etiqueta}>
+                          {form.tipo === 'CD' ? 'Centro de distribución' : 'Tienda'}
+                        </label>
+                        <select
+                            id="ubicacionId"
+                            name="ubicacionId"
+                            value={form.ubicacionId}
+                            onChange={handleChange}
+                            className={campo}
+                        >
+                          <option value="">Selecciona una opción</option>
+                          {ubicaciones.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.nombre}
+                              </option>
+                          ))}
+                        </select>
+                        {modal === 'crear' && ubicaciones.length === 0 && (
+                            <p className={ayuda}>Todas las ubicaciones de este tipo ya tienen inventario creado.</p>
+                        )}
+                        {modal === 'entrada' && ubicaciones.length === 0 && (
+                            <p className={ayuda}>
+                              Ningún CD abierto tiene inventario creado. Primero usa "Crear inventario".
+                            </p>
+                        )}
+                        {modal === 'entrada' && ubicacionSel && (
+                            <p className={ayuda}>
+                              Ocupación: {totalEn('CD', ubicacionSel.id)} / {ubicacionSel.capacidadMaxima} unidades
+                              (espacio disponible: {Math.max(0, ubicacionSel.capacidadMaxima - totalEn('CD', ubicacionSel.id))})
+                            </p>
+                        )}
+                      </div>
+                  )}
 
-                  {/* CREAR: encargado y capacidad */}
-                  {modal === 'crear' && (
+                  {/* CREAR y EDITAR: encargado y capacidad */}
+                  {(modal === 'crear' || modal === 'editar') && (
                       <>
                         <div>
                           <label className={etiqueta}>Encargado</label>
@@ -511,8 +507,25 @@ export default function Inventario() {
                       </>
                   )}
 
+                  {/* EDITAR: abrir o cerrar la ubicación */}
+                  {modal === 'editar' && (
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                          <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} />
+                          Activar/desactivar
+                        </label>
+                        {!form.activo && (
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                              {form.tipo === 'CD'
+                                  ? 'Al desactivar el CD no se podrán registrar entradas ni despachos, y se le quitará el encargado asignado.'
+                                  : 'Al desactivar la tienda no podrá recibir despachos ni registrar ventas.'}
+                            </p>
+                        )}
+                      </div>
+                  )}
+
                   {/* ENTRADA y SALIDA: producto */}
-                  {modal !== 'crear' && (
+                  {(modal === 'entrada' || modal === 'salida') && (
                       <div>
                         <label htmlFor="productoId" className={etiqueta}>Producto</label>
                         <select
@@ -568,7 +581,7 @@ export default function Inventario() {
                   )}
 
                   {/* ENTRADA y SALIDA: cantidad */}
-                  {modal !== 'crear' && (
+                  {(modal === 'entrada' || modal === 'salida') && (
                       <div>
                         <label htmlFor="cantidad" className={etiqueta}>Cantidad</label>
                         <input
@@ -597,7 +610,13 @@ export default function Inventario() {
                         disabled={guardando}
                         className="px-4 py-2.5 text-sm font-medium bg-[#1e3a5f] hover:bg-[#254a75] text-white rounded-lg transition-colors disabled:opacity-60"
                     >
-                      {guardando ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Registrar'}
+                      {guardando
+                          ? 'Guardando...'
+                          : modal === 'crear'
+                              ? 'Crear'
+                              : modal === 'editar'
+                                  ? 'Guardar cambios'
+                                  : 'Registrar'}
                     </button>
                   </div>
                 </form>
