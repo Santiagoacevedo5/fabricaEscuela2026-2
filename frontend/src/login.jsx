@@ -27,7 +27,10 @@ function Login({ onLoginSuccess }) {
       });
 
       if (!response.ok) {
-        throw new Error('Usuario o contraseña incorrectos');
+        // 423 = bloqueado en el servidor; cualquier otro error muestra siempre el mismo mensaje genérico
+        throw new Error(response.status === 423
+          ? 'Usuario bloqueado por 15 minutos por intentos fallidos. Intenta más tarde.'
+          : 'Usuario o contraseña incorrectos');
       }
 
       const token = await response.text();
