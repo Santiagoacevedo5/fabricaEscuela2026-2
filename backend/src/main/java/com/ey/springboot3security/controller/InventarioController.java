@@ -61,54 +61,14 @@ public class InventarioController {
         return ResponseEntity.status(403).body("Acceso no autorizado: solo puede operar la ubicación que tiene asignada.");
     }
 
+    // HUS03: endpoint cerrado. Fijaba la cantidad de un producto directamente, sin validar rol
+    // y sin dejar movimiento, así que permitía alterar existencias sin trazabilidad.
+    // El stock solo cambia por /entradas, /despachos y /ventas, que sí registran el movimiento.
     @PostMapping
     public ResponseEntity<?> crearInventario(@RequestBody Inventario inventario) {
-        boolean esCd = inventario.getCentroDistribucion() != null;
-        boolean esTienda = inventario.getTienda() != null;
-
-        // 1. Validaciones de campos
-        if (esCd == esTienda) {
-            return ResponseEntity.badRequest().body("Error: Debe indicar un centro de distribución o una tienda (solo uno).");
-        }
-        if (inventario.getProducto() == null || inventario.getProducto().getIdProducto() == null) {
-            return ResponseEntity.badRequest().body("Error: El producto es obligatorio.");
-        }
-        if (inventario.getCantidad() == null || inventario.getCantidad() < 0) {
-            return ResponseEntity.badRequest().body("Error: La cantidad debe ser 0 o mayor.");
-        }
-
-        // 2. El producto debe existir
-        Producto producto = productoRepository.findById(inventario.getProducto().getIdProducto()).orElse(null);
-        if (producto == null) {
-            return ResponseEntity.status(404).body("Error: El producto no existe.");
-        }
-        inventario.setProducto(producto);
-
-        // 3. La ubicación debe existir y no tener ya ese producto
-        if (esCd) {
-            Integer id = inventario.getCentroDistribucion().getId();
-            CentroDistribucion cd = id == null ? null : centroRepository.findById(id).orElse(null);
-            if (cd == null) {
-                return ResponseEntity.status(404).body("Error: El centro de distribución no existe.");
-            }
-            if (inventarioRepository.existsByProductoIdProductoAndCentroDistribucionId(producto.getIdProducto(), id)) {
-                return ResponseEntity.status(409).body("Error: Este producto ya tiene inventario en el centro de distribución.");
-            }
-            inventario.setCentroDistribucion(cd);
-        } else {
-            Integer id = inventario.getTienda().getId();
-            Tienda tienda = id == null ? null : tiendaRepository.findById(id).orElse(null);
-            if (tienda == null) {
-                return ResponseEntity.status(404).body("Error: La tienda no existe.");
-            }
-            if (inventarioRepository.existsByProductoIdProductoAndTiendaId(producto.getIdProducto(), id)) {
-                return ResponseEntity.status(409).body("Error: Este producto ya tiene inventario en la tienda.");
-            }
-            inventario.setTienda(tienda);
-        }
-
-        inventario.setId(null); // evita que un id enviado sobrescriba un registro existente
-        return ResponseEntity.status(201).body(inventarioRepository.save(inventario));
+        return ResponseEntity.status(410).body(
+                "Error: Este endpoint ya no se usa. El stock solo se modifica con "
+                        + "/api/inventario/entradas, /api/inventario/despachos o /api/inventario/ventas.");
     }
 
     @GetMapping
@@ -142,9 +102,7 @@ public class InventarioController {
         if (movimiento.getCantidad() == null || movimiento.getCantidad() <= 0) {
             return ResponseEntity.badRequest().body("Error: La cantidad debe ser mayor a 0.");
         }
-        if (venta && movimiento.getFecha() != null && movimiento.getFecha().isAfter(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("Error: La fecha de la venta no puede ser futura.");
-        }
+        // HUS03: ya no se valida la fecha del cliente porque se ignora; la pone el servidor (@PrePersist)
 
         Long idInventario = movimiento.getInventario() == null ? null : movimiento.getInventario().getId();
         Inventario inventario = idInventario == null ? null : inventarioRepository.findById(idInventario).orElse(null);
@@ -177,6 +135,7 @@ public class InventarioController {
         inventarioRepository.save(inventario);
         movimiento.setInventario(inventario);
         movimiento.setId(null);
+        movimiento.setUsuario(auth.getName()); // HUS03: ignora cualquier usuario enviado en el body
         return ResponseEntity.status(201).body(movimientoRepository.save(movimiento));
     }
 
@@ -264,16 +223,18 @@ public class InventarioController {
         destino.setCantidad(cantidadDestino + req.getCantidad());
         destino = inventarioRepository.save(destino);
 
-        // 7. Trazabilidad: salida en el CD y entrada en la tienda
+        // 7. Trazabilidad: salida en el CD y entrada en la tienda (HUS03: con el usuario del token)
         MovimientoInventario salida = new MovimientoInventario();
         salida.setInventario(origen);
         salida.setTipo("SALIDA");
         salida.setCantidad(req.getCantidad());
+        salida.setUsuario(auth.getName());
 
         MovimientoInventario entrada = new MovimientoInventario();
         entrada.setInventario(destino);
         entrada.setTipo("ENTRADA");
         entrada.setCantidad(req.getCantidad());
+        entrada.setUsuario(auth.getName());
 
         return ResponseEntity.status(201).body(Map.of(
                 "salida", movimientoRepository.save(salida),
@@ -401,11 +362,12 @@ public class InventarioController {
         fila.setCantidad(actual + req.getCantidad());
         fila = inventarioRepository.save(fila);
 
-        // 6. Trazabilidad
+        // 6. Trazabilidad (HUS03: con el usuario del token)
         MovimientoInventario movimiento = new MovimientoInventario();
         movimiento.setInventario(fila);
         movimiento.setTipo("ENTRADA");
         movimiento.setCantidad(req.getCantidad());
+        movimiento.setUsuario(auth.getName());
         return ResponseEntity.status(201).body(movimientoRepository.save(movimiento));
     }
 
