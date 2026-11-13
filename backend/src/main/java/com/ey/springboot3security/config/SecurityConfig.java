@@ -81,6 +81,12 @@ public class SecurityConfig {
                         // CERRADO: agregaba productos al CD sin revisar capacidad; ahora entran por /entradas
                         .requestMatchers("/api/inventario-cd/**").denyAll()
 
+                        // ---------- Demanda (HU5.1): solo consulta, admin y encargado de CD ----------
+                        // Qué tiendas ve cada uno lo decide DemandaService a partir del token.
+                        .requestMatchers(HttpMethod.GET, "/api/demanda", "/api/demanda/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
+                        .requestMatchers("/api/demanda", "/api/demanda/**").denyAll()
+
                         // ---------- Plantilla original ----------
                         .requestMatchers("/auth/user/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/auth/admin/**").hasAuthority("ROLE_ADMIN")

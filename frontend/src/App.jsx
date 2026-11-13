@@ -7,6 +7,7 @@ import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
 import Inventario from './pages/Inventario'
 import Ventas from './pages/Ventas'
+import Demanda from './pages/Demanda'
 
 const cargarUsuario = async (token) => {
     const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
@@ -59,7 +60,8 @@ export default function App() {
         if (!usuario?.roles?.length) return
         const permitida =
             (view !== 'empleados' || esAdmin) &&
-            (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA'))
+            (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) &&
+            (view !== 'demanda' || tieneRol('ROLE_ADMIN', 'ENCARGADO_CD'))
         if (!permitida) setView('inventario')
     }, [usuario, view])
 
@@ -156,6 +158,10 @@ export default function App() {
         }
         if (view === 'ventas' && tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) {
             return <Ventas esAdmin={esAdmin} />
+        }
+        // HU5.1: Demanda por tienda (admin y encargado de CD)
+        if (view === 'demanda' && tieneRol('ROLE_ADMIN', 'ENCARGADO_CD')) {
+            return <Demanda esAdmin={esAdmin} />
         }
 
         return (
