@@ -7,6 +7,8 @@ import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
 import Inventario from './pages/Inventario'
 import Ventas from './pages/Ventas'
+import ReglasReposicion from './pages/ReglasReposicion'
+import RecomendacionesReposicion from './pages/RecomendacionesReposicion'
 
 const cargarUsuario = async (token) => {
     const respuesta = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
@@ -59,9 +61,11 @@ export default function App() {
         if (!usuario?.roles?.length) return
         const permitida =
             (view !== 'empleados' || esAdmin) &&
-            (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA'))
+            (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) &&
+            (view !== 'reglas-reposicion' || esAdmin) &&
+            (view !== 'recomendaciones-reposicion' || esEncargadoCd)
         if (!permitida) setView('inventario')
-    }, [usuario, view])
+    }, [usuario, view, esEncargadoCd])
 
     const cargarEmpleados = async (token) => {
         try {
@@ -156,6 +160,12 @@ export default function App() {
         }
         if (view === 'ventas' && tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) {
             return <Ventas esAdmin={esAdmin} />
+        }
+        if (view === 'reglas-reposicion' && esAdmin) {
+            return <ReglasReposicion />
+        }
+        if (view === 'recomendaciones-reposicion' && esEncargadoCd) {
+            return <RecomendacionesReposicion />
         }
 
         return (

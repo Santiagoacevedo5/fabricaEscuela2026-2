@@ -5,11 +5,13 @@ import com.ey.springboot3security.dto.DespachoRequest;
 import com.ey.springboot3security.dto.EntradaRequest;
 import com.ey.springboot3security.entity.CentroDistribucion;
 import com.ey.springboot3security.entity.Inventario;
+import com.ey.springboot3security.entity.MovimientoInventario;
 import com.ey.springboot3security.entity.Producto;
 import com.ey.springboot3security.entity.Tienda;
 import com.ey.springboot3security.entity.UserInfo;
 import com.ey.springboot3security.repository.CentroDistribucionRepository;
 import com.ey.springboot3security.repository.InventarioRepository;
+import com.ey.springboot3security.repository.MovimientoInventarioRepository;
 import com.ey.springboot3security.repository.ProductoRepository;
 import com.ey.springboot3security.repository.TiendaRepository;
 import com.ey.springboot3security.service.CentroDistribucionService;
@@ -19,8 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import com.ey.springboot3security.entity.MovimientoInventario;
-import com.ey.springboot3security.repository.MovimientoInventarioRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -147,7 +147,10 @@ public class InventarioController {
         }
 
         Long idInventario = movimiento.getInventario() == null ? null : movimiento.getInventario().getId();
-        Inventario inventario = idInventario == null ? null : inventarioRepository.findById(idInventario).orElse(null);
+        Inventario inventario = idInventario == null ? null
+                : venta
+                ? inventarioRepository.findByIdForUpdate(idInventario).orElse(null)
+                : inventarioRepository.findById(idInventario).orElse(null);
         if (inventario == null) {
             return ResponseEntity.status(404).body("Error: El inventario no existe.");
         }
@@ -176,6 +179,7 @@ public class InventarioController {
         inventario.setCantidad((int) nuevaCantidad);
         inventarioRepository.save(inventario);
         movimiento.setInventario(inventario);
+        movimiento.setUsuario(auth.getName()); // trazabilidad: quién registró el movimiento
         movimiento.setId(null);
         return ResponseEntity.status(201).body(movimientoRepository.save(movimiento));
     }

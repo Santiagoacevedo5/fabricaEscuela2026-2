@@ -71,16 +71,14 @@ CREATE DATABASE empresa;
 
 ### 3. Configurar variables de entorno
 
-El proyecto usa variables de entorno para no exponer credenciales en el código. Crea estas dos variables **a nivel de tu sistema operativo** (no se suben a Git):
+El backend lee las credenciales de `backend/.env`. Si el archivo aún no existe, copia `backend/.env.example` como `backend/.env` y reemplaza los valores de ejemplo:
 
 | Variable | Valor |
 |---|---|
 | `DB_USERNAME` | Tu usuario de PostgreSQL (por defecto `postgres`) |
 | `DB_PASSWORD` | Tu contraseña de PostgreSQL |
 
-**Windows:** Buscar "variables de entorno" → Editar las variables de entorno del sistema → Variables de entorno → Nueva (en "Variables de usuario").
-
-Después de crearlas, **reinicia tu IDE** para que las reconozca.
+`backend/.env` está excluido de Git. No lo compartas ni lo subas al repositorio.
 
 ### 4. Correr el backend
 

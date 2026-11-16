@@ -28,6 +28,10 @@ public class MovimientoInventario {
 
     private LocalDateTime fecha;
 
+    // Usuario autenticado que registró el movimiento (nullable: registros anteriores)
+    @Column
+    private String usuario;
+
     @PrePersist
     void alCrear() {
         if (fecha == null || !"VENTA".equals(tipo)) {
