@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Immutable;
 import java.time.LocalDateTime;
 
 @Entity
+@Immutable // HUS03: un movimiento registrado no se puede modificar
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,16 +28,15 @@ public class MovimientoInventario {
     @Column(nullable = false)
     private Integer cantidad;
 
-    private LocalDateTime fecha;
-
-    // Usuario autenticado que registró el movimiento (nullable: registros anteriores)
+    // HUS03: quién hizo el movimiento (sale del token, nunca del formulario)
     @Column
     private String usuario;
 
+    // HUS03: la fecha y hora siempre las pone el servidor
+    private LocalDateTime fecha;
+
     @PrePersist
     void alCrear() {
-        if (fecha == null || !"VENTA".equals(tipo)) {
-            fecha = LocalDateTime.now();
-        }
+        fecha = LocalDateTime.now();
     }
 }
