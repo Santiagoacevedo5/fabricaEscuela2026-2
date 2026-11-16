@@ -35,6 +35,7 @@ public class MovimientoInventario {
     // HUS03: la fecha y hora siempre las pone el servidor
     private LocalDateTime fecha;
 
+    // HUS03: la fecha y hora siempre las pone el servidor
     @PrePersist
     void alCrear() {
         fecha = LocalDateTime.now();

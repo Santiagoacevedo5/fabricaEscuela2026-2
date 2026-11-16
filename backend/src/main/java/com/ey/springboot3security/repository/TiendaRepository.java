@@ -20,6 +20,9 @@ public interface TiendaRepository extends JpaRepository<Tienda, Integer> {
     // HUS-02 "Mi inventario": la tienda de la que es encargado el usuario logueado
     Optional<Tienda> findByEncargado_Username(String username);
 
+    // HU5.1: tiendas que abastece un CD (las que puede consultar su encargado en Demanda)
+    List<Tienda> findByCentroDistribucionId(Integer centroId);
+
     // Empleados con rol de encargado de tienda que aún no tienen ninguna tienda asignada
     @Query("SELECT new com.ey.springboot3security.dto.EncargadoDto(u.id, u.name) FROM UserInfo u "
             + "WHERE u.roles LIKE '%ENCARGADO_TIENDA%' "
