@@ -173,7 +173,6 @@ export default function App() {
         if (view === 'demanda' && tieneRol('ROLE_ADMIN', 'ENCARGADO_CD')) {
             return <Demanda esAdmin={esAdmin} />
         }
-        }
 
         return (
             <div className="p-6 text-sm text-slate-500">
