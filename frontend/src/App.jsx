@@ -7,6 +7,8 @@ import CentrosDistribucion from './pages/CentrosDistribucion'
 import Productos from './components/Productos'
 import Inventario from './pages/Inventario'
 import Ventas from './pages/Ventas'
+import ReglasReposicion from './pages/ReglasReposicion'
+import RecomendacionesReposicion from './pages/RecomendacionesReposicion'
 import Demanda from './pages/Demanda'
 
 const cargarUsuario = async (token) => {
@@ -61,9 +63,11 @@ export default function App() {
         const permitida =
             (view !== 'empleados' || esAdmin) &&
             (view !== 'ventas' || tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) &&
+            (view !== 'reglas-reposicion' || esAdmin) &&
+            (view !== 'recomendaciones-reposicion' || esEncargadoCd) &&
             (view !== 'demanda' || tieneRol('ROLE_ADMIN', 'ENCARGADO_CD'))
         if (!permitida) setView('inventario')
-    }, [usuario, view])
+    }, [usuario, view, esEncargadoCd])
 
     const cargarEmpleados = async (token) => {
         try {
@@ -158,6 +162,12 @@ export default function App() {
         }
         if (view === 'ventas' && tieneRol('ROLE_ADMIN', 'ENCARGADO_TIENDA')) {
             return <Ventas esAdmin={esAdmin} />
+        }
+        if (view === 'reglas-reposicion' && esAdmin) {
+            return <ReglasReposicion />
+        }
+        if (view === 'recomendaciones-reposicion' && esEncargadoCd) {
+            return <RecomendacionesReposicion />
         }
         // HU5.1: Demanda por tienda (admin y encargado de CD)
         if (view === 'demanda' && tieneRol('ROLE_ADMIN', 'ENCARGADO_CD')) {

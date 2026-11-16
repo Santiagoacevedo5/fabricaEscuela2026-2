@@ -67,6 +67,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/**").authenticated()
                         .requestMatchers("/api/productos", "/api/productos/**").hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
 
+                        // ---------- Reglas de reposición: solo admin ----------
+                        .requestMatchers("/api/reglas-reposicion", "/api/reglas-reposicion/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/recomendaciones-reposicion", "/api/recomendaciones-reposicion/**")
+                        .hasAuthority("ENCARGADO_CD")
+
                         // ---------- Inventario ----------
                         .requestMatchers("/api/inventario/capacidad").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/inventario/entradas", "/api/inventario/despachos")

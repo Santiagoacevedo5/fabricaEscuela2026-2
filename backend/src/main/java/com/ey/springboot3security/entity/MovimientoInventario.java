@@ -29,8 +29,10 @@ public class MovimientoInventario {
     private Integer cantidad;
 
     // HUS03: quién hizo el movimiento (sale del token, nunca del formulario)
+    @Column
     private String usuario;
 
+    // HUS03: la fecha y hora siempre las pone el servidor
     private LocalDateTime fecha;
 
     // HUS03: la fecha y hora siempre las pone el servidor

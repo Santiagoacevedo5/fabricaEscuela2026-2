@@ -77,6 +77,26 @@ const NAV_ITEMS = [
             </svg>
         ),
     },
+    {
+        view: 'recomendaciones-reposicion',
+        label: 'Recomendaciones de reposición',
+        roles: ['ENCARGADO_CD'],
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+            </svg>
+        ),
+    },
+    {
+        view: 'reglas-reposicion',
+        label: 'Reglas de reposición',
+        roles: ['ROLE_ADMIN'],
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        ),
+    },
 ]
 
 export default function Layout({ currentView, onViewChange, onLogout, usuario, children }) {

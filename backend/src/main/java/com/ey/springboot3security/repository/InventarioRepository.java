@@ -1,7 +1,9 @@
 package com.ey.springboot3security.repository;
 
 import com.ey.springboot3security.entity.Inventario;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,6 +11,21 @@ import java.util.List;
 import java.util.Optional;
 
 public interface InventarioRepository extends JpaRepository<Inventario, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Inventario i WHERE i.id = :id")
+    Optional<Inventario> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Inventario i WHERE i.producto.idProducto = :productoId AND i.tienda.id = :tiendaId")
+    Optional<Inventario> findByProductoYTiendaForUpdate(
+            @Param("productoId") Long productoId, @Param("tiendaId") Integer tiendaId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Inventario i WHERE i.producto.idProducto = :productoId "
+            + "AND i.centroDistribucion.id = :centroId")
+    Optional<Inventario> findByProductoYCentroForUpdate(
+            @Param("productoId") Long productoId, @Param("centroId") Integer centroId);
+
     // Spring arma la consulta a partir del nombre del método
     boolean existsByProductoIdProductoAndCentroDistribucionId(Long idProducto, Integer centroId);
     boolean existsByProductoIdProductoAndTiendaId(Long idProducto, Integer tiendaId);
