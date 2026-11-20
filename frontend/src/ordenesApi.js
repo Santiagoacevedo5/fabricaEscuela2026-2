@@ -60,3 +60,6 @@ export const aprobarOrden = id =>
 
 export const rechazarOrden = (id, motivo) =>
     consulta(`/api/ordenes/${id}/rechazar`, 'PUT', { motivo })
+
+export const enviarOrden = id =>
+    consulta(`/api/ordenes/${id}/enviar`, 'PUT')

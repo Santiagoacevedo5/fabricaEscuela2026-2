@@ -61,7 +61,6 @@ public class CentroDistribucionService {
         return "Centro de distribución registrado correctamente";
     }
 
-    //Aquí empieza HU 3.6
     public String editarCentro(Integer id, CentroDistribucion centroDistribucion){
         Optional<CentroDistribucion> centroOpt = centroRepository.findById(id);
         if (centroOpt.isEmpty()){
@@ -137,7 +136,6 @@ public class CentroDistribucionService {
 
         return "El estado del centro ha sido actualizado con éxito";
     }
-    //Aquí termina HU 3.6
 
     public String detalleOrdenesActivas(Integer centroId){
         List<OrdenReabastecimiento> ordenes = ordenRepository.findByTienda_CentroDistribucion_IdAndEstadoIn(centroId, ESTADOS_ORDEN_ACTIVA);
