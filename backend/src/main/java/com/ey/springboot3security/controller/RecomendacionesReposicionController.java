@@ -26,6 +26,15 @@ public class RecomendacionesReposicionController {
 
     @GetMapping
     public List<RecomendacionReposicionResponse> listar(Authentication authentication) {
+        // HU7.1: Permitir consultar recomendaciones como administrador
+        if (authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+
+            return centroRepository.findAll().stream()
+                    .flatMap(centro -> reabastecimientoService
+                            .listarRecomendaciones(centro.getId()).stream())
+                    .toList();
+        }
         return reabastecimientoService.listarRecomendaciones(centroDelEncargado(authentication).getId());
     }
 

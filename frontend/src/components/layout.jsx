@@ -80,10 +80,45 @@ const NAV_ITEMS = [
     {
         view: 'recomendaciones-reposicion',
         label: 'Recomendaciones de reposición',
-        roles: ['ENCARGADO_CD'],
+        roles: ['ROLE_ADMIN','ENCARGADO_CD'],
         icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+            </svg>
+        ),
+    },
+    {
+        view: 'nueva-orden',
+        label: 'Nueva orden',
+        roles: ['ROLE_ADMIN', 'ENCARGADO_CD'],
+        icon: (
+            <svg className="w-4 h-4"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+
+                <path strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 7h7l2 2h9v11H3zM12 12v5m-2.5-2.5h5" />
+            </svg>
+        ),
+    },
+
+    {
+        view: 'ordenes',
+        label: 'Órdenes',
+        roles: ['ROLE_ADMIN', 'ENCARGADO_CD'],
+        icon: (
+            <svg className="w-4 h-4"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+
+                <path strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 4h8v3H8zM6 6H4v15h16V6h-2M8 12h8m-8 4h8" />
             </svg>
         ),
     },

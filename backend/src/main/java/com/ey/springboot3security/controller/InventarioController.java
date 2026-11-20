@@ -409,6 +409,12 @@ public class InventarioController {
             if (max < total) {
                 return ResponseEntity.status(409).body("Error: La capacidad máxima no puede ser menor a las unidades que ya tiene (" + total + ").");
             }
+            if (req.getActivo() != null && !req.getActivo()){
+                String detalle = centroDistribucionService.detalleOrdenesActivas(cd.getId());
+                if (detalle != null){
+                    return ResponseEntity.status(409).body("Error: No se puede desactivar el centro ya que tiene: " + detalle);
+                }
+            }
             cd.setCapacidadMinima(min);
             cd.setCapacidadMaxima(max);
             centroRepository.save(cd);

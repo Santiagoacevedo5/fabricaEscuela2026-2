@@ -1,6 +1,7 @@
 package com.ey.springboot3security.entity;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,6 +22,15 @@ public class OrdenReabastecimiento {
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 
+    @Column(name = "revisado_por")
+    private String revisadoPor;
+
+    @Column(name = "fecha_revision")
+    private LocalDateTime fechaRevision;
+
+    @Column(name = "motivo_rechazo", length = 500)
+    private String motivoRechazo;
+
     @PrePersist
     void alCrear() {
         if (fechaCreacion == null) {
@@ -39,4 +49,14 @@ public class OrdenReabastecimiento {
 
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+
+    public String getRevisadoPor(){ return revisadoPor; }
+    public void setRevisadoPor(String revisadoPor) { this.revisadoPor = revisadoPor; }
+
+    public LocalDateTime getFechaRevision() { return fechaRevision; }
+    public void setFechaRevision(LocalDateTime fechaRevision) { this.fechaRevision = fechaRevision; }
+
+    public String getMotivoRechazo() { return motivoRechazo; }
+    public void setMotivoRechazo(String motivoRechazo) { this.motivoRechazo = motivoRechazo; }
+
 }

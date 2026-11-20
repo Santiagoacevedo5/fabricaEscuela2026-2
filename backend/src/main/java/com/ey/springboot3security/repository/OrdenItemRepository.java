@@ -20,4 +20,6 @@ public interface OrdenItemRepository extends JpaRepository<OrdenItem, Long> {
             """)
     List<OrdenActivaReposicionData> findOrdenesActivas(
             @Param("centroId") Integer centroId, @Param("estados") Collection<String> estados);
+
+    List<OrdenItem> findByOrden_Id(Long ordenId);
 }

@@ -70,7 +70,11 @@ public class SecurityConfig {
                         // ---------- Reglas de reposición: solo admin ----------
                         .requestMatchers("/api/reglas-reposicion", "/api/reglas-reposicion/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/recomendaciones-reposicion", "/api/recomendaciones-reposicion/**")
-                        .hasAuthority("ENCARGADO_CD")
+                        .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
+
+                        // ---------- Órdenes de reabastecimiento ----------
+                        .requestMatchers("/api/ordenes", "/api/ordenes/**")
+                        .hasAnyAuthority("ROLE_ADMIN","ENCARGADO_CD")
 
                         // ---------- Inventario ----------
                         .requestMatchers("/api/inventario/capacidad").hasAuthority("ROLE_ADMIN")
