@@ -176,7 +176,13 @@ export default function CentrosDistribucion({ puedeEditar }) {
         const datos = {
             nombre: formEdicion.nombre.trim(),
             ubicacion: formEdicion.ubicacion.trim(),
-            encargado: quedaActivo && formEdicion.encargadoId ? { id: Number(formEdicion.encargadoId) } : null,
+            encargado: desactivando
+                ? (centroEditando?.encargado
+                    ? { id: centroEditando.encargado.id }
+                    : null)
+                : (quedaActivo && formEdicion.encargadoId
+                    ? { id: Number(formEdicion.encargadoId) }
+                    : null),
         }
         const estado = { estado: activando ? 'ACTIVO' : 'INACTIVO' }
 
@@ -204,12 +210,12 @@ export default function CentrosDistribucion({ puedeEditar }) {
                 return
             }
 
-            // Al desactivar, el estado va después de guardar los datos (el backend también quita el encargado)
+            // El backend valida las órdenes activas antes de liberar al encargado
             if (desactivando) {
                 const errorEstado = await enviarPut(`${urlBase}/estado`, estado, MENSAJE_ESTADO)
                 if (errorEstado) {
                     cargarCentros()
-                    setErrorServidor(`Los datos se guardaron, pero no se pudo desactivar el centro: ${errorEstado}`)
+                    setErrorServidor(errorEstado)
                     return
                 }
             }
