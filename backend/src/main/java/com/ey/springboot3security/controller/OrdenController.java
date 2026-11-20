@@ -53,4 +53,14 @@ public class OrdenController {
         return ResponseEntity.ok(ordenService.rechazarOrden(id, request.getMotivo(), authentication.getName()));
 
     }
+
+    @PutMapping("/{id}/enviar")
+    public ResponseEntity<OrdenReabastecimiento> enviarOrden(
+            @PathVariable Long id,
+            Authentication authentication){
+
+        return ResponseEntity.ok(
+                ordenService.enviarOrden(
+                        id, authentication.getName()));
+    }
 }

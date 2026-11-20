@@ -14,12 +14,14 @@ public class OrdenResponse {
     private String revisadoPor;
     private String motivoRechazo;
 
+    private String enviadoPor;
+    private LocalDateTime fechaEnvio;
+
     private Long tiendaId;
     private String tiendaNombre;
 
     private Integer centroId;
     private String centroNombre;
-
 
     private String encargadoTiendaNombre;
     private String encargadoTiendaUsername;

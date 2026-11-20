@@ -3,7 +3,6 @@ package com.ey.springboot3security.dto;
 import lombok.Data;
 import java.util.List;
 
-//Body de POST /api/ordenes: crear una orden de reabastecimiento
 
 @Data
 public class OrdenRequest {

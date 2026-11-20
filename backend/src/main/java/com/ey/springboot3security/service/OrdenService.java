@@ -25,13 +25,15 @@ public class OrdenService {
     private final InventarioRepository inventarioRepository;
     private final OrdenReabastecimientoRepository ordenRepository;
     private final OrdenItemRepository ordenItemRepository;
+    private final MovimientoInventarioRepository movimientoRepository;
 
     public OrdenService(CentroDistribucionRepository centroRepository,
                         TiendaRepository tiendaRepository,
                         ProductoRepository productoRepository,
                         InventarioRepository inventarioRepository,
                         OrdenReabastecimientoRepository ordenRepository,
-                        OrdenItemRepository ordenItemRepository){
+                        OrdenItemRepository ordenItemRepository,
+                        MovimientoInventarioRepository movimientoRepository){
 
         this.centroRepository = centroRepository;
         this.tiendaRepository = tiendaRepository;
@@ -39,6 +41,7 @@ public class OrdenService {
         this.inventarioRepository = inventarioRepository;
         this.ordenRepository = ordenRepository;
         this.ordenItemRepository = ordenItemRepository;
+        this.movimientoRepository = movimientoRepository;
     }
 
 
@@ -250,6 +253,111 @@ public class OrdenService {
         return ordenRepository.save(orden);
     }
 
+    @Transactional
+    public OrdenReabastecimiento enviarOrden(Long id, String username){
+
+        OrdenReabastecimiento orden = obtenerOrden(id, username, true);
+
+        if (!"Aprobada".equals(orden.getEstado())){
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Solo se pueden enviar órdenes aprobadas");
+        }
+
+        Tienda tienda = orden.getTienda();
+        CentroDistribucion centro = tienda.getCentroDistribucion();
+
+        if (centro == null || !"ACTIVO".equals(centro.getEstado())){
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El centro de distribución no está activo");
+        }
+
+        if (Boolean.FALSE.equals(tienda.getActiva())){
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "La tienda de destino está inactiva");
+        }
+
+        List<OrdenItem> items = new ArrayList<>(
+                ordenItemRepository.findByOrden_Id(id));
+
+        if (items.isEmpty()){
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No se puede enviar una orden sin productos");
+        }
+
+        Set<Long> productosVistos = new HashSet<>();
+
+        for (OrdenItem item : items){
+
+            if (item.getProducto() == null ||
+                    item.getCantidad() == null ||
+                    item.getCantidad() <= 0 ||
+                    !productosVistos.add(
+                            item.getProducto().getIdProducto())){
+
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "La orden contiene productos o cantidades inválidos");
+            }
+        }
+
+        items.sort(Comparator.comparing(
+                item -> item.getProducto().getIdProducto()));
+
+        for (OrdenItem item : items){
+
+            Long productoId = item.getProducto().getIdProducto();
+
+            Inventario inventario = inventarioRepository
+                    .findByProductoYCentroForUpdate(
+                            productoId, centro.getId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "El producto no existe en el inventario del CD"));
+
+            int stock = inventario.getCantidad() == null
+                    ? 0 : inventario.getCantidad();
+
+            long reservado = ordenItemRepository
+                    .findOrdenesActivas(
+                            centro.getId(), ESTADOS_QUE_RESERVAN_STOCK)
+                    .stream()
+                    .filter(r -> productoId.equals(r.productoId()))
+                    .mapToLong(r -> r.cantidad())
+                    .sum();
+
+            if (stock < item.getCantidad() || stock < reservado){
+
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Stock insuficiente para enviar el producto "
+                                + item.getProducto().getNombre());
+            }
+
+            inventario.setCantidad(stock - item.getCantidad());
+
+            inventarioRepository.save(inventario);
+
+            MovimientoInventario salida = new MovimientoInventario();
+
+            salida.setInventario(inventario);
+            salida.setTipo("SALIDA");
+            salida.setCantidad(item.getCantidad());
+            salida.setUsuario(username);
+
+            movimientoRepository.save(salida);
+        }
+
+        orden.setEstado("Enviada");
+        orden.setFechaEnvio(LocalDateTime.now());
+        orden.setEnviadoPor(username);
+
+        return ordenRepository.save(orden);
+    }
+
     @Transactional(readOnly = true)
     public List<OrdenResponse> listarOrdenesResponse(String username){
 
@@ -275,6 +383,8 @@ public class OrdenService {
         response.setFechaRevision(orden.getFechaRevision());
         response.setRevisadoPor(orden.getRevisadoPor());
         response.setMotivoRechazo(orden.getMotivoRechazo());
+        response.setEnviadoPor(orden.getEnviadoPor());
+        response.setFechaEnvio(orden.getFechaEnvio());
 
         response.setTiendaId(orden.getTienda().getId().longValue());
         response.setTiendaNombre(orden.getTienda().getNombre());

@@ -4,7 +4,8 @@ import {
     listarOrdenes,
     obtenerOrden,
     aprobarOrden,
-    rechazarOrden
+    rechazarOrden,
+    enviarOrden
 } from '../ordenesApi'
 
 const boton = 'rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'
@@ -103,8 +104,10 @@ export default function Ordenes() {
         }
     }
 
-    // Aprobar o rechazar
+    // Aprobar, rechazar o enviar - Task 135
     const confirmar = async () => {
+
+        if (ocupado || !detalle) return
 
         if (modal === 'rechazar' && !motivo.trim()) {
             return setErrorModal(
@@ -127,13 +130,19 @@ export default function Ordenes() {
 
         try {
 
-            const actualizado = accion === 'aprobar'
-                ? await aprobarOrden(detalle.id)
-                : await rechazarOrden(detalle.id, motivo.trim())
+            const actualizado = accion === 'enviar'
+                ? await enviarOrden(detalle.id)
+                : accion === 'aprobar'
+                    ? await aprobarOrden(detalle.id)
+                    : await rechazarOrden(detalle.id, motivo.trim())
 
             setExito(
                 `Orden #${detalle.id} ${
-                    accion === 'aprobar' ? 'aprobada' : 'rechazada'
+                    accion === 'enviar'
+                        ? 'enviada'
+                        : accion === 'aprobar'
+                            ? 'aprobada'
+                            : 'rechazada'
                 }.`
             )
 
@@ -142,7 +151,9 @@ export default function Ordenes() {
                 estado: actualizado.estado,
                 fechaRevision: actualizado.fechaRevision,
                 revisadoPor: actualizado.revisadoPor,
-                motivoRechazo: actualizado.motivoRechazo
+                motivoRechazo: actualizado.motivoRechazo,
+                fechaEnvio: actualizado.fechaEnvio,
+                enviadoPor: actualizado.enviadoPor
             }
 
             setDetalle(nuevo)
@@ -191,6 +202,9 @@ export default function Ordenes() {
 
     const pendientes = detalle?.estado === 'Pendiente'
 
+    // Task 135: Solo las órdenes aprobadas pueden enviarse
+    const puedeEnviar = detalle?.estado === 'Aprobada'
+
     return (
 
         <div className="p-6 md:p-8">
@@ -201,7 +215,7 @@ export default function Ordenes() {
                 </h1>
 
                 <p className="mt-1 mb-6 text-sm text-slate-500">
-                    Consulta, aprueba o rechaza las órdenes del centro de distribución
+                    Consulta, aprueba, rechaza o envía las órdenes del centro de distribución
                 </p>
 
                 {error && (
@@ -319,7 +333,7 @@ export default function Ordenes() {
 
                                     <td className="p-4">
 
-                                        {/* NUEVO: Botón compacto de detalle */}
+                                        {/* Botón compacto de detalle */}
                                         <button
                                             type="button"
                                             disabled={ocupado}
@@ -332,13 +346,21 @@ export default function Ordenes() {
                                                 stroke="currentColor"
                                                 viewBox="0 0 24 24"
                                                 aria-hidden="true">
+
                                                 <path
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
                                                     strokeWidth={1.8}
                                                     d="M2.25 12s3.75-7 9.75-7 9.75 7 9.75 7-3.75 7-9.75 7S2.25 12 2.25 12z"
                                                 />
-                                                <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
+
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="3"
+                                                    strokeWidth={1.8}
+                                                />
+
                                             </svg>
 
                                             Ver detalle
@@ -492,7 +514,27 @@ export default function Ordenes() {
 
                         )}
 
-                        <div className="mt-6 flex justify-end gap-3">
+                        {/* Task 135 - Datos de auditoría del envío */}
+
+                        {detalle.fechaEnvio && (
+
+                            <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800">
+
+                                <p>
+                                    <b>Enviada por:</b> {detalle.enviadoPor}
+                                </p>
+
+                                <p>
+                                    <b>Fecha y hora:</b>
+                                    {' '}
+                                    {fecha(detalle.fechaEnvio)} · {hora(detalle.fechaEnvio)}
+                                </p>
+
+                            </div>
+
+                        )}
+
+                        <div className="mt-6 flex flex-wrap justify-end gap-3">
 
                             <button
                                 className={rojo}
@@ -511,6 +553,21 @@ export default function Ordenes() {
                                 Aprobar
 
                             </button>
+
+                            {/* Task 135 - Botón para enviar órdenes aprobadas */}
+
+                            {puedeEnviar && (
+
+                                <button
+                                    className={boton + ' hover:brightness-110 transition-colors'}
+                                    disabled={ocupado}
+                                    onClick={() => abrirAccion('enviar')}>
+
+                                    Marcar como enviada
+
+                                </button>
+
+                            )}
 
                         </div>
 
@@ -596,6 +653,71 @@ export default function Ordenes() {
                                     : modal === 'aprobar'
                                         ? 'Confirmar aprobación'
                                         : 'Confirmar rechazo'}
+
+                            </button>
+
+                        </div>
+
+                    </Modal>
+
+                )}
+
+                {/* Task 135 - Modal de confirmación de envío */}
+
+                {modal === 'enviar' && detalle && (
+
+                    <Modal
+                        title="Confirmar envío de orden"
+                        onClose={cerrar}>
+
+                        <p className="text-sm text-slate-600">
+
+                            ¿Confirmas el envío de la orden #{detalle.id}
+                            {' '}para {detalle.tiendaNombre}?
+
+                        </p>
+
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+
+                            Los productos serán descontados del inventario
+                            del centro de distribución. La tienda deberá
+                            confirmar su recepción.
+
+                        </p>
+
+                        {errorModal && (
+
+                            <p role="alert"
+                               className="mt-2 text-sm text-red-600">
+
+                                {errorModal}
+
+                            </p>
+
+                        )}
+
+                        <div className="mt-6 flex justify-end gap-3">
+
+                            <button
+                                className={cancelar}
+                                disabled={ocupado}
+                                onClick={() => {
+                                    setModal('detalle')
+                                    setErrorModal('')
+                                }}>
+
+                                Cancelar
+
+                            </button>
+
+                            <button
+                                className={boton}
+                                disabled={ocupado || !puedeEnviar}
+                                onClick={confirmar}>
+
+                                {ocupado
+                                    ? 'Procesando...'
+                                    : 'Confirmar envío'}
 
                             </button>
 

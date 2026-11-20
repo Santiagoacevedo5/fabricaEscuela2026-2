@@ -31,6 +31,12 @@ public class OrdenReabastecimiento {
     @Column(name = "motivo_rechazo", length = 500)
     private String motivoRechazo;
 
+    @Column(name = "enviado_por")
+    private String enviadoPor;
+
+    @Column(name = "fecha_envio")
+    private LocalDateTime fechaEnvio;
+
     @PrePersist
     void alCrear() {
         if (fechaCreacion == null) {
@@ -59,4 +65,19 @@ public class OrdenReabastecimiento {
     public String getMotivoRechazo() { return motivoRechazo; }
     public void setMotivoRechazo(String motivoRechazo) { this.motivoRechazo = motivoRechazo; }
 
+    public String getEnviadoPor() {
+        return enviadoPor;
+    }
+
+    public void setEnviadoPor(String enviadoPor) {
+        this.enviadoPor = enviadoPor;
+    }
+
+    public LocalDateTime getFechaEnvio() {
+        return fechaEnvio;
+    }
+
+    public void setFechaEnvio(LocalDateTime fechaEnvio) {
+        this.fechaEnvio = fechaEnvio;
+    }
 }
