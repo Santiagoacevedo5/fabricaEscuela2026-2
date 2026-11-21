@@ -58,4 +58,21 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                  @Param("tiendaIds") List<Integer> tiendaIds,
                                                  @Param("desde") LocalDateTime desde,
                                                  @Param("hasta") LocalDateTime hasta);
+
+    // HU8.1: unidades vendidas por producto en [desde, hasta), en una tienda o en todas (tiendaId null).
+    // Filas {idProducto, unidades}.
+    @Query("""
+            SELECT i.producto.idProducto, SUM(m.cantidad)
+            FROM MovimientoInventario m
+            JOIN m.inventario i
+            WHERE m.tipo = 'VENTA'
+              AND i.tienda IS NOT NULL
+              AND (:tiendaId IS NULL OR i.tienda.id = :tiendaId)
+              AND m.fecha >= :desde
+              AND m.fecha < :hasta
+            GROUP BY i.producto.idProducto
+            """)
+    List<Object[]> ventasPorProducto(@Param("tiendaId") Integer tiendaId,
+                                     @Param("desde") LocalDateTime desde,
+                                     @Param("hasta") LocalDateTime hasta);
 }

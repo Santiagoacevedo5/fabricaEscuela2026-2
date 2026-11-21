@@ -26,6 +26,12 @@ public interface InventarioRepository extends JpaRepository<Inventario, Long> {
     Optional<Inventario> findByProductoYCentroForUpdate(
             @Param("productoId") Long productoId, @Param("centroId") Integer centroId);
 
+    // HU8.1: stock actual por producto en una tienda o en todas las tiendas (tiendaId null). Filas {idProducto, stock}.
+    @Query("SELECT i.producto.idProducto, SUM(i.cantidad) FROM Inventario i "
+            + "WHERE i.tienda IS NOT NULL AND (:tiendaId IS NULL OR i.tienda.id = :tiendaId) "
+            + "GROUP BY i.producto.idProducto")
+    List<Object[]> stockTiendasPorProducto(@Param("tiendaId") Integer tiendaId);
+
     // Spring arma la consulta a partir del nombre del método
     boolean existsByProductoIdProductoAndCentroDistribucionId(Long idProducto, Integer centroId);
     boolean existsByProductoIdProductoAndTiendaId(Long idProducto, Integer tiendaId);

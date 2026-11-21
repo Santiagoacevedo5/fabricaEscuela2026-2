@@ -96,6 +96,10 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
                         .requestMatchers("/api/demanda", "/api/demanda/**").denyAll()
 
+                        // ---------- Reportes (HU8.1): solo consulta, admin ----------
+                        .requestMatchers(HttpMethod.GET, "/api/reportes", "/api/reportes/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/reportes", "/api/reportes/**").denyAll()
+
                         // ---------- Plantilla original ----------
                         .requestMatchers("/auth/user/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/auth/admin/**").hasAuthority("ROLE_ADMIN")

@@ -68,6 +68,17 @@ const NAV_ITEMS = [
         ),
     },
     {
+        // HU8.1: reporte de rotación de productos (solo admin)
+        view: 'reporte-rotacion',
+        label: 'Rotación de productos',
+        roles: ['ROLE_ADMIN'],
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M5.1 15a7 7 0 0012.8 2M18.9 9A7 7 0 006.1 7" />
+            </svg>
+        ),
+    },
+    {
         view: 'ventas',
         label: 'Ventas',
         roles: ['ROLE_ADMIN', 'ENCARGADO_TIENDA'],
