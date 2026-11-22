@@ -79,6 +79,28 @@ const NAV_ITEMS = [
         ),
     },
     {
+        // HU8.2: reporte de niveles de inventario (solo admin)
+        view: 'reporte-inventario',
+        label: 'Niveles de inventario',
+        roles: ['ROLE_ADMIN'],
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6m4 6V7m4 10v-3M4 21h16M4 3v18" />
+            </svg>
+        ),
+    },
+    {
+        // HU7.3: seguimiento de órdenes de mi tienda (solo encargado de tienda)
+        view: 'mis-ordenes',
+        label: 'Mis órdenes',
+        roles: ['ENCARGADO_TIENDA'],
+        icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4h8v3H8zM6 6H4v15h16V6h-2M8 12h8m-8 4h8" />
+            </svg>
+        ),
+    },
+    {
         view: 'ventas',
         label: 'Ventas',
         roles: ['ROLE_ADMIN', 'ENCARGADO_TIENDA'],
