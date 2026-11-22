@@ -63,3 +63,24 @@ export const rechazarOrden = (id, motivo) =>
 
 export const enviarOrden = id =>
     consulta(`/api/ordenes/${id}/enviar`, 'PUT')
+
+// ---------- HU7.3: Mis órdenes (encargado de tienda) ----------
+export const misOrdenes = () =>
+    consulta('/api/mis-ordenes')
+
+export const detalleMiOrden = id =>
+    consulta(`/api/mis-ordenes/${id}`)
+
+export const confirmarRecepcion = id =>
+    consulta(`/api/mis-ordenes/${id}/recepcion`, 'POST')
+
+// ---------- HU8.2: Reporte de niveles de inventario (admin) ----------
+export const ubicacionesReporte = () =>
+    consulta('/api/reportes/ubicaciones')
+
+export const reporteInventario = (tipo, ubicacionId) =>
+    consulta(
+        tipo && ubicacionId
+            ? `/api/reportes/inventario?tipo=${tipo}&ubicacionId=${ubicacionId}`
+            : '/api/reportes/inventario'
+    )

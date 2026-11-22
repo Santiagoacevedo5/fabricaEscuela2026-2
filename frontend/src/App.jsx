@@ -11,6 +11,8 @@ import ReglasReposicion from './pages/ReglasReposicion'
 import RecomendacionesReposicion from './pages/RecomendacionesReposicion'
 import Demanda from './pages/Demanda'
 import ReporteRotacion from './pages/ReporteRotacion'
+import ReporteInventario from './pages/ReporteInventario'
+import MisOrdenes from './pages/MisOrdenes'
 
 import NuevaOrden from './pages/NuevaOrden'
 import Ordenes from './pages/Ordenes'
@@ -74,7 +76,9 @@ export default function App() {
             (view !== 'ordenes' || esAdmin || esEncargadoCd) &&
 
             (view !== 'demanda' || tieneRol('ROLE_ADMIN', 'ENCARGADO_CD')) &&
-            (view !== 'reporte-rotacion' || esAdmin)
+            (view !== 'reporte-rotacion' || esAdmin) &&
+            (view !== 'reporte-inventario' || esAdmin) &&
+            (view !== 'mis-ordenes' || tieneRol('ENCARGADO_TIENDA'))
 
         if (!permitida) setView('inventario')
     }, [usuario, view, esEncargadoCd])
@@ -199,6 +203,16 @@ export default function App() {
         // HU8.1: Reporte de rotación de productos (solo admin)
         if (view === 'reporte-rotacion' && esAdmin) {
             return <ReporteRotacion />
+        }
+
+        // HU8.2: Reporte de niveles de inventario (solo admin)
+        if (view === 'reporte-inventario' && esAdmin) {
+            return <ReporteInventario />
+        }
+
+        // HU7.3: Mis órdenes (solo encargado de tienda)
+        if (view === 'mis-ordenes' && tieneRol('ENCARGADO_TIENDA')) {
+            return <MisOrdenes />
         }
 
         return (

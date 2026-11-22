@@ -72,6 +72,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/recomendaciones-reposicion", "/api/recomendaciones-reposicion/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ENCARGADO_CD")
 
+                        // ---------- HU7.3: Mis órdenes (solo encargado de tienda) ----------
+                        .requestMatchers("/api/mis-ordenes", "/api/mis-ordenes/**")
+                        .hasAuthority("ENCARGADO_TIENDA")
+
                         // ---------- Órdenes de reabastecimiento ----------
                         .requestMatchers("/api/ordenes", "/api/ordenes/**")
                         .hasAnyAuthority("ROLE_ADMIN","ENCARGADO_CD")
